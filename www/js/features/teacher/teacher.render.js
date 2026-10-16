@@ -991,10 +991,10 @@ function renderTeacherResultsPage(state) {
                         </div>
                     </div>
 
-                    <nav class="flex-1 py-4">
+                                        <nav class="flex-1 py-4">
                         <ul class="space-y-1 px-3">
                             <li>
-                                <a href="#" onclick="setPageAndCloseTeacherSidebar('dashboard')" class="dashboard-menu-item flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors" data-page="dashboard">
+                                <a href="#" onclick="setPageAndCloseTeacherSidebar('teacher')" class="dashboard-menu-item flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors" data-page="dashboard">
                                     <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
                                     <span class="font-medium">Dashboard</span>
                                 </a>
@@ -1006,7 +1006,7 @@ function renderTeacherResultsPage(state) {
                                 </a>
                             </li>
                             <li>
-                                <a href="#" onclick="setPageAndCloseTeacherSidebar('import')" class="dashboard-menu-item flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors" data-page="import">
+                                <a href="#" onclick="handleTeacherImportClick(event)" class="dashboard-menu-item flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors" data-page="import">
                                     <i data-lucide="upload" class="w-5 h-5"></i>
                                     <span class="font-medium">Import Exam</span>
                                 </a>

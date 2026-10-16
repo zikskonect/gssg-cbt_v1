@@ -1340,7 +1340,15 @@ async function downloadOrShareCSV(csvContent, fileName, title) {
 /**
  * Parse CSV with scheduled date support (updated from original)
  */
-function parseCSVWithBetterHandlingAndDate(csvText) {
+/**
+ * Parse CSV with smart format detection.
+ * Handles:
+ *   1. Old format:  exam_id,subject,class,duration,questions_json
+ *   2. New format:  exam_id,subject,class,duration,assessment_type,questions_json
+ *   3. Date format: exam_id,subject,class,duration,scheduled_date,questions_json
+ *   4. Master format: exam_id,subject,class,duration,assessment_type,scheduled_date,created_by,questions_json
+ */
+function parseCSVWithBetterHandling(csvText) {
     const rows = [];
     let currentLine = "";
     let inQuotes = false;
@@ -1359,36 +1367,61 @@ function parseCSVWithBetterHandlingAndDate(csvText) {
 
     if (rows.length < 2) throw new Error('File appears to be empty or invalid.');
 
-    const firstDataRow = parseCSVLine(rows[1]);
-    
-    // Check if this is the new format with scheduled_date
-    const hasScheduledDate = firstDataRow.length >= 5 && firstDataRow[4] && !firstDataRow[4].startsWith('[') && !firstDataRow[4].startsWith('"[');
-    
-    // The json column is either at index 4 (old format) or index 5 (new format)
-    const jsonColumnIndex = hasScheduledDate ? 5 : 4;
-    const jsonColumn = firstDataRow[jsonColumnIndex] ? firstDataRow[jsonColumnIndex].trim() : "";
-    const isImmortalFormat = jsonColumn.startsWith('[') || jsonColumn.startsWith('"[');
+    // ---------- Read header to detect format ----------
+    const header = parseCSVLine(rows[0]).map(h => h.trim().toLowerCase());
+
+    const idx = {
+        exam_id:          header.indexOf('exam_id'),
+        subject:          header.indexOf('subject'),
+        class:            header.indexOf('class'),
+        duration:         header.indexOf('duration'),
+        questions_json:   header.indexOf('questions_json'),
+        assessment_type:  header.indexOf('assessment_type'),
+        scheduled_date:   header.indexOf('scheduled_date'),
+        created_by:       header.indexOf('created_by'),
+    };
+
+    // questions_json column MUST exist — otherwise it's not a valid export
+    if (idx.questions_json === -1) {
+        throw new Error('Missing questions_json column — file was not exported from this app.');
+    }
+
+    // ---------- Parse first data row ----------
+    const first = parseCSVLine(rows[1]);
 
     const exam = {
-        exam_id: firstDataRow[0] || 'N/A',
-        subject: firstDataRow[1] || 'Unknown Subject',
-        class: firstDataRow[2] || 'Unknown Class',
-        duration: parseInt(firstDataRow[3]) || 30,
-        scheduledDate: hasScheduledDate ? firstDataRow[4] || null : null,
+        exam_id:         first[idx.exam_id]   || 'N/A',
+        subject:         first[idx.subject]   || 'Unknown Subject',
+        class:           first[idx.class]     || 'Unknown Class',
+        duration:        parseInt(first[idx.duration]) || 30,
+        assessmentType:  idx.assessment_type !== -1
+                            ? (first[idx.assessment_type] || 'EXAM').toUpperCase().trim()
+                            : 'EXAM',
+        scheduledDate:   idx.scheduled_date !== -1
+                            ? (first[idx.scheduled_date] || null)
+                            : null,
+        created_by:      idx.created_by !== -1 ? (first[idx.created_by] || '') : '',
         questions: []
     };
 
-    if (isImmortalFormat) {
+    // ---------- Parse questions_json ----------
+    let jsonColumn = first[idx.questions_json] ? first[idx.questions_json].trim() : '';
+
+    // Strip surrounding quotes if any (CSV writers sometimes double-quote)
+    if (jsonColumn.startsWith('"') && jsonColumn.endsWith('"')) {
+        jsonColumn = jsonColumn.substring(1, jsonColumn.length - 1).replace(/""/g, '"');
+    }
+
+    if (jsonColumn.startsWith('[')) {
+        // Immortal / JSON-in-one-cell format
         try {
-            let cleanJson = jsonColumn;
-            if (cleanJson.startsWith('"') && cleanJson.endsWith('"')) {
-                cleanJson = cleanJson.substring(1, cleanJson.length - 1).replace(/""/g, '"');
-            }
-            exam.questions = JSON.parse(cleanJson);
+            exam.questions = JSON.parse(jsonColumn);
         } catch (e) {
-            throw new Error("The immortal JSON data is corrupted.");
+            throw new Error('The questions JSON data is corrupted.');
         }
     } else {
+        // Legacy row-per-question format (no header-based JSON)
+        // This is very old — we try our best.
         for (let i = 1; i < rows.length; i++) {
             const row = parseCSVLine(rows[i]);
             if (row.length < 8) continue;
@@ -1396,10 +1429,14 @@ function parseCSVWithBetterHandlingAndDate(csvText) {
                 id: row[5] || Date.now() + i,
                 type: row[6] || 'multiple_choice',
                 question: row[7],
-                options: [row[8], row[9], row[10], row[11]],
+                options: [row[8], row[9], row[10], row[11]].filter(Boolean),
                 correct_answer: row[12]
             });
         }
+    }
+
+    if (!Array.isArray(exam.questions) || exam.questions.length === 0) {
+        throw new Error('No questions were found in the file.');
     }
 
     return exam;

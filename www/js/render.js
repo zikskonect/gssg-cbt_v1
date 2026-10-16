@@ -24,123 +24,145 @@ function isValidImageSrc(src) {
 // to remain dependency-free and testable.
 
 function renderHomePage() {
+    const schoolName     = window.SCHOOL_CONFIG?.schoolName      || 'School';
+    const shortName      = window.SCHOOL_CONFIG?.schoolShortName || 'SCH';
+    const logoPath       = window.SCHOOL_CONFIG?.logoPath        || 'js/icons/128x128.png';
+    const themeColor     = window.SCHOOL_CONFIG?.themeColor      || '#B80236';
+    const secondaryColor = window.SCHOOL_CONFIG?.secondaryColor  || '#8a0228';
+    const tagline        = window.SCHOOL_CONFIG?.tagline         || 'Education for Positive Change';
+    const subtitle       = window.SCHOOL_CONFIG?.subtitle        || 'Offline Examination Platform';
+
     return `
-        <div class="h-screen bg-gradient-to-br from-[#B80236] via-[#950229] to-[#7a0222] flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+        <div class="h-screen flex items-center justify-center p-2 sm:p-4 overflow-hidden"
+             style="background: linear-gradient(135deg, ${themeColor} 0%, ${secondaryColor} 100%);">
             <!-- Decorative background elements -->
             <div class="absolute inset-0 overflow-hidden pointer-events-none">
                 <div class="absolute top-20 right-20 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
                 <div class="absolute bottom-20 left-20 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
             </div>
-            
+
             <div class="relative z-10 bg-white/98 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-6xl h-[96vh] sm:h-[92vh] overflow-hidden flex flex-col">
                 <div class="flex flex-col md:flex-row flex-1 overflow-hidden">
-                    <!-- Left Panel - Branding (Hidden on mobile) -->
-                    <div class="hidden md:flex md:w-1/2 bg-gradient-to-br from-[#B80236] to-[#8a0228] p-8 lg:p-12 flex-col justify-center items-center text-white relative overflow-hidden">
+
+                    <!-- ============================== -->
+                    <!-- LEFT PANEL (hidden on mobile)   -->
+                    <!-- ============================== -->
+                    <div class="hidden md:flex md:w-1/2 p-8 lg:p-12 flex-col justify-center items-center text-white relative overflow-hidden"
+                         style="background: linear-gradient(135deg, ${themeColor} 0%, ${secondaryColor} 100%);">
                         <!-- Subtle pattern overlay -->
                         <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle, white 1px, transparent 1px); background-size: 24px 24px;"></div>
-                        
-                        <div class="relative z-10 w-full flex flex-col items-center justify-center space-y-8">
-                            <!-- Large Logo Icon -->
-                            <div class="w-32 h-32 lg:w-40 lg:h-40 bg-white/15 backdrop-blur-sm rounded-3xl shadow-2xl border-4 border-white/30 flex items-center justify-center transform hover:scale-105 transition-all duration-300">
-                                <i data-lucide="graduation-cap" class="w-16 h-16 lg:w-20 lg:h-20 text-white"></i>
+
+                        <div class="relative z-10 w-full flex flex-col items-center justify-center space-y-6">
+                            <!-- School Logo (large) -->
+                            <div class="w-40 h-40 lg:w-48 lg:h-48 bg-white/15 backdrop-blur-sm rounded-3xl shadow-2xl border-4 border-white/30 flex items-center justify-center overflow-hidden transform hover:scale-105 transition-all duration-300">
+                                <img src="${logoPath}"
+                                     alt="${shortName} Logo"
+                                     class="w-full h-full object-contain p-3"
+                                     onerror="this.style.display='none'; this.parentElement.innerHTML='<i data-lucide=&quot;graduation-cap&quot; class=&quot;w-20 h-20 lg:w-24 lg:h-24 text-white&quot;></i>'; if(window.lucide) lucide.createIcons();" />
                             </div>
-                            
-                            <!-- Welcome Text -->
-                            <div class="text-center space-y-4">
-                                 <h2 class="text-4xl lg:text-5xl font-bold">TESTULATOR</h2>
-                                 <p class="text-white/90 text-xl lg:text-2xl">Your intelligent CBT partner</p>
+
+                            <!-- School Name -->
+                            <div class="text-center space-y-3 max-w-md">
+                                <h2 class="text-3xl lg:text-4xl font-bold leading-tight">${schoolName}</h2>
+                                <p class="text-white/90 text-lg lg:text-xl">${subtitle}</p>
                             </div>
-                            
+
                             <!-- Tagline -->
-                            <div class="pt-8 border-t border-white/20 w-full text-center">
-                                <p class="text-xl lg:text-2sm font-bold italic flex items-center justify-center gap-2">
-                                    <i class="w-6 h-6"></i>
-                                    "Education for Positive Change"
+                            <div class="pt-6 border-t border-white/20 w-full text-center">
+                                <p class="text-lg lg:text-xl font-bold italic">
+                                    "${tagline}"
                                 </p>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Right Panel - Logo and Actions (Full width on mobile) -->
+
+                    <!-- ============================== -->
+                    <!-- RIGHT PANEL (always visible)    -->
+                    <!-- ============================== -->
                     <div class="w-full md:w-1/2 p-4 sm:p-6 lg:p-8 flex flex-col justify-center items-center h-full bg-gradient-to-br from-gray-50 to-white overflow-y-auto">
                         <div class="w-full max-w-md flex flex-col justify-center" style="min-height: 0;">
+
                             <!-- Logo and School Name -->
                             <div class="text-center mb-6 sm:mb-8 flex-shrink-0">
-                                <!-- Logo -->
+                                <!-- Logo (visible on both, but bigger on mobile) -->
                                 <div class="flex justify-center items-center mb-4">
                                     <div class="relative">
-                                        <div class="absolute inset-0 bg-[#B80236]/20 rounded-2xl blur-xl"></div>
-                                        <img src="icon-192.png"
-                                             alt="GSSS Logo" 
-                                             class="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl shadow-xl border-4 border-white"
-                                             onerror="this.parentElement.innerHTML='<div class=&quot;relative w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#B80236] to-[#8a0228] rounded-2xl flex items-center justify-center shadow-xl&quot;><i data-lucide=&quot;graduation-cap&quot; class=&quot;w-8 h-8 sm:w-10 sm:h-10 text-white&quot;></i></div>'">
+                                        <div class="absolute inset-0 rounded-2xl blur-xl opacity-30" style="background: ${themeColor};"></div>
+                                        <img src="${logoPath}"
+                                             alt="${shortName} Logo"
+                                             class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl shadow-xl border-4 border-white object-contain bg-white p-1.5"
+                                             onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=&quot;relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shadow-xl&quot; style=&quot;background: linear-gradient(135deg, ${themeColor} 0%, ${secondaryColor} 100%);&quot;><i data-lucide=&quot;graduation-cap&quot; class=&quot;w-10 h-10 sm:w-12 sm:h-12 text-white&quot;></i></div>'; if(window.lucide) lucide.createIcons();" />
                                     </div>
                                 </div>
-                                
+
                                 <!-- School Name -->
                                 <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 leading-tight mb-2">
-                                    TESTULATOR
+                                    ${schoolName}
                                 </h1>
-                                <div class="inline-block bg-[#B80236]/10 px-3 py-1.5 rounded-full mt-2">
-                                    <p class="text-xs sm:text-sm text-[#B80236] font-semibold">Offline Digital Examination Platform</p>
+                                <div class="inline-block px-3 py-1.5 rounded-full mt-2" style="background: ${themeColor}1A;">
+                                    <p class="text-xs sm:text-sm font-semibold" style="color: ${themeColor};">${subtitle}</p>
                                 </div>
-                                
+
                                 <!-- Mobile tagline -->
-                                <p class="md:hidden text-sm sm:text-base font-semibold italic text-[#B80236] mt-4">"Education for Positive Change"</p>
+                                <p class="md:hidden text-sm sm:text-base font-semibold italic mt-4" style="color: ${themeColor};">"${tagline}"</p>
                             </div>
-                            
+
                             <!-- Action Buttons -->
-<div class="w-full grid grid-cols-2 gap-2 sm:gap-3 flex-shrink-0 mb-4">
-                                 <!-- Student Button -->
-                                 <button onclick="setPage('student-info')" 
-                                         class="group bg-gradient-to-r from-[#B80236] to-[#8a0228] text-white p-3 sm:p-4 rounded-lg sm:rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex flex-col items-center justify-center gap-2 border-2 border-[#B80236] hover:from-[#900028] hover:to-[#6a0220] relative overflow-hidden">
-                                     <div class="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300"></div>
-                                     <i data-lucide="user-check" class="relative w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform"></i>
-                                     <div class="relative text-center">
-                                         <span class="block text-sm sm:text-base font-bold">Start Exam</span>
-                                         <span class="block text-xs text-white/80">Students</span>
-                                     </div>
-                                 </button>
- 
-                                 <!-- Teacher Button -->
-                                 <button onclick="setPage('teacher-login')" 
-                                         class="group bg-gradient-to-r from-[#B80236] to-[#8a0228] text-white p-3 sm:p-4 rounded-lg sm:rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex flex-col items-center justify-center gap-2 border-2 border-[#B80236] hover:from-[#900028] hover:to-[#6a0220] relative overflow-hidden">
-                                     <div class="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300"></div>
-                                     <i data-lucide="school" class="relative w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform"></i>
-                                     <div class="relative text-center">
-                                         <span class="block text-sm sm:text-base font-bold">Teacher</span>
-                                         <span class="block text-xs text-white/80">Portal</span>
-                                     </div>
-                                 </button>
-                             </div>
- 
-                             <!-- Exam Office Button -->
-                             <button onclick="setPage('exam-office-login')" 
-                                     class="w-full group bg-gradient-to-r from-purple-600 to-purple-800 text-white p-3 sm:p-4 rounded-lg sm:rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 border-2 border-purple-600 hover:from-purple-700 hover:to-purple-900 relative overflow-hidden">
-                                 <div class="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300"></div>
-                                 <i data-lucide="building" class="relative w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform"></i>
-                                 <span class="relative text-sm sm:text-base font-bold">Exam Office</span>
-                             </button>
+                            <div class="w-full grid grid-cols-2 gap-2 sm:gap-3 flex-shrink-0 mb-4">
+                                <!-- Student Button -->
+                                <button onclick="setPage('student-info')"
+                                        class="group text-white p-3 sm:p-4 rounded-lg sm:rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex flex-col items-center justify-center gap-2 border-2 relative overflow-hidden"
+                                        style="background: linear-gradient(90deg, ${themeColor} 0%, ${secondaryColor} 100%); border-color: ${themeColor};">
+                                    <div class="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300"></div>
+                                    <i data-lucide="user-check" class="relative w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform"></i>
+                                    <div class="relative text-center">
+                                        <span class="block text-sm sm:text-base font-bold">Start Exam</span>
+                                        <span class="block text-xs text-white/80">Students</span>
+                                    </div>
+                                </button>
+
+                                <!-- Teacher Button -->
+                                <button onclick="setPage('teacher-login')"
+                                        class="group text-white p-3 sm:p-4 rounded-lg sm:rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex flex-col items-center justify-center gap-2 border-2 relative overflow-hidden"
+                                        style="background: linear-gradient(90deg, ${themeColor} 0%, ${secondaryColor} 100%); border-color: ${themeColor};">
+                                    <div class="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300"></div>
+                                    <i data-lucide="school" class="relative w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform"></i>
+                                    <div class="relative text-center">
+                                        <span class="block text-sm sm:text-base font-bold">Teacher</span>
+                                        <span class="block text-xs text-white/80">Portal</span>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <!-- Exam Office Button -->
+                            <button onclick="setPage('exam-office-login')"
+                                    class="w-full group text-white p-3 sm:p-4 rounded-lg sm:rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 border-2 relative overflow-hidden"
+                                    style="background: linear-gradient(90deg, #7e22ce 0%, #581c87 100%); border-color: #7e22ce;">
+                                <div class="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300"></div>
+                                <i data-lucide="building" class="relative w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform"></i>
+                                <span class="relative text-sm sm:text-base font-bold">Exam Office</span>
+                            </button>
 
                             <!-- Feature badges -->
-                            <div class="flex flex-wrap justify-center gap-2 flex-shrink-0">
+                            <div class="flex flex-wrap justify-center gap-2 flex-shrink-0 mt-4">
                                 <div class="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
-                                    <i data-lucide="wifi-off" class="w-4 h-4 text-[#B80236]"></i>
+                                    <i data-lucide="wifi-off" class="w-4 h-4" style="color: ${themeColor};"></i>
                                     <span class="text-xs font-semibold text-gray-700">Offline</span>
                                 </div>
                                 <div class="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
-                                    <i data-lucide="shield-check" class="w-4 h-4 text-[#B80236]"></i>
+                                    <i data-lucide="shield-check" class="w-4 h-4" style="color: ${themeColor};"></i>
                                     <span class="text-xs font-semibold text-gray-700">Secure</span>
                                 </div>
                                 <div class="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
-                                    <i data-lucide="clock" class="w-4 h-4 text-[#B80236]"></i>
+                                    <i data-lucide="clock" class="w-4 h-4" style="color: ${themeColor};"></i>
                                     <span class="text-xs font-semibold text-gray-700">Timed</span>
                                 </div>
                             </div>
 
                             <!-- Close Button -->
                             <button id="closeBtn"
-                                    class="group w-full mt-4 bg-gradient-to-r from-[#B80236] to-[#8a0228] hover:from-[#900028] hover:to-[#6a0220] text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-md border-2 border-[#B80236] relative overflow-hidden">
+                                    class="group w-full mt-4 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-md border-2 relative overflow-hidden"
+                                    style="background: linear-gradient(90deg, ${themeColor} 0%, ${secondaryColor} 100%); border-color: ${themeColor};">
                                 <div class="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-300"></div>
                                 <i data-lucide="power" class="relative w-5 h-5"></i>
                                 <span class="relative">Close Application</span>
@@ -148,7 +170,7 @@ function renderHomePage() {
 
                             <!-- Footer info -->
                             <div class="mt-4 pt-4 text-center flex-shrink-0">
-                                <p class="text-xs text-gray-500">© 2025 GSSS • Version 1.0</p>
+                                <p class="text-xs text-gray-500">© 2025 ${shortName} • Version 1.0</p>
                             </div>
                         </div>
                     </div>
@@ -157,7 +179,6 @@ function renderHomePage() {
         </div>
     `;
 }
-
 
 
  function renderTeacherRegistrationPage() {
