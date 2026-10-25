@@ -13,6 +13,7 @@ function handleDragLeave(event) {
     event.currentTarget.classList.remove('drag-over');
 }
 
+
 function handleDrop(event) {
     event.preventDefault();
     event.currentTarget.classList.remove('drag-over');
@@ -27,27 +28,59 @@ function handleExamOfficeFileSelect(event) {
 }
 
 function processSelectedFiles(files) {
+    pendingUploadFiles = [];
+    const statusEl = document.getElementById('upload-status');
+    const fileListEl = document.getElementById('file-list');
+    const filesInfoEl = document.getElementById('files-selected-info');
+    if (fileListEl) fileListEl.innerHTML = '';
+
     const nonCsvFiles = files.filter(file => {
         const name = file.name.toLowerCase();
         return !name.endsWith('.csv') && !file.type.includes('csv');
     });
 
     if (nonCsvFiles.length > 0) {
+        if (statusEl) statusEl.classList.add('hidden');
+        const uploadZone = document.getElementById('upload-zone');
+        if (uploadZone) uploadZone.classList.remove('has-file');
         showAlert(`❌ Non-CSV files detected:\n${nonCsvFiles.map(f => f.name).join('\n')}\n\nOnly CSV files are accepted.`, 'error', 5000);
         return;
     }
 
-    if (files.length === 0) return;
+    if (files.length === 0) {
+        if (statusEl) statusEl.classList.add('hidden');
+        return;
+    }
 
     pendingUploadFiles = files;
 
-    const statusEl = document.getElementById('upload-status');
-    const fileListEl = document.getElementById('file-list');
-    const filesInfoEl = document.getElementById('files-selected-info');
-
     if (statusEl) statusEl.classList.remove('hidden');
+    if (filesInfoEl) filesInfoEl.textContent = `${files.length} file(s) selected • Reading...`;
+    const uploadZone = document.getElementById('upload-zone');
+    if (uploadZone) uploadZone.classList.add('has-file');
 
     let totalQuestions = 0;
+    const fileRows = files.map(file => {
+        const item = document.createElement('div');
+        item.className = 'file-list-item';
+
+        const details = document.createElement('div');
+        details.className = 'min-w-0';
+        const name = document.createElement('p');
+        name.className = 'text-sm font-medium text-gray-800 truncate';
+        name.textContent = file.name;
+        const summary = document.createElement('p');
+        summary.className = 'text-xs text-gray-500';
+        summary.textContent = 'Reading CSV...';
+        details.append(name, summary);
+
+        const status = document.createElement('span');
+        status.className = 'text-xs text-gray-500 font-semibold';
+        status.textContent = 'Reading';
+        item.append(details, status);
+        if (fileListEl) fileListEl.appendChild(item);
+        return { summary, status };
+    });
 
     files.forEach((file, index) => {
         const reader = new FileReader();
@@ -55,70 +88,25 @@ function processSelectedFiles(files) {
             try {
                 const exam = parseCSVWithBetterHandling(e.target.result);
                 totalQuestions += exam.questions?.length || 0;
-
-                const itemHtml = `
-                    <div class="file-list-item">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <i data-lucide="file" class="w-4 h-4 text-green-500 flex-shrink-0"></i>
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium text-gray-800 truncate">${file.name}</p>
-                                <p class="text-xs text-gray-500">${exam.subject || 'Unknown'} • ${exam.class || 'N/A'} • ${exam.questions?.length || 0} questions${exam.duration ? ' • ' + exam.duration + ' min' : ''}</p>
-                            </div>
-                        </div>
-                        <span class="text-xs text-green-600 font-semibold">✓ Valid</span>
-                    </div>
-                `;
-
-                if (fileListEl) {
-                    let existingItem = fileListEl.children[index];
-                    if (existingItem) {
-                        existingItem.outerHTML = itemHtml;
-                    } else {
-                        fileListEl.insertAdjacentHTML('beforeend', itemHtml);
-                    }
-                }
-
+                fileRows[index].summary.textContent =
+                    `${exam.subject || 'Unknown'} • ${exam.class || 'N/A'} • ${exam.questions?.length || 0} questions${exam.duration ? ' • ' + exam.duration + ' min' : ''}`;
+                fileRows[index].status.className = 'text-xs text-green-600 font-semibold';
+                fileRows[index].status.textContent = '✓ Valid';
                 if (filesInfoEl) {
                     filesInfoEl.textContent = `${files.length} file(s) selected • ${totalQuestions} total questions`;
                 }
-
-                if (window.lucide) lucide.createIcons();
             } catch (err) {
-                const errorHtml = `
-                    <div class="file-list-item">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <i data-lucide="file-x" class="w-4 h-4 text-red-500 flex-shrink-0"></i>
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium text-gray-800 truncate">${file.name}</p>
-                                <p class="text-xs text-red-500">${err.message || 'Invalid CSV format'}</p>
-                            </div>
-                        </div>
-                        <span class="text-xs text-red-600 font-semibold">✗ Error</span>
-                    </div>
-                `;
-                if (fileListEl) {
-                    let existingItem = fileListEl.children[index];
-                    if (existingItem) {
-                        existingItem.outerHTML = errorHtml;
-                    } else {
-                        fileListEl.insertAdjacentHTML('beforeend', errorHtml);
-                    }
-                }
+                fileRows[index].summary.className = 'text-xs text-red-500';
+                fileRows[index].summary.textContent = err.message || 'Invalid CSV format';
+                fileRows[index].status.className = 'text-xs text-red-600 font-semibold';
+                fileRows[index].status.textContent = '✗ Error';
             }
         };
         reader.onerror = function() {
-            if (fileListEl) {
-                const errorHtml = `
-                    <div class="file-list-item">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="file-x" class="w-4 h-4 text-red-500"></i>
-                            <span class="text-sm text-red-600">${file.name} — Failed to read file</span>
-                        </div>
-                        <span class="text-xs text-red-600">✗ Error</span>
-                    </div>
-                `;
-                fileListEl.insertAdjacentHTML('beforeend', errorHtml);
-            }
+            fileRows[index].summary.className = 'text-xs text-red-500';
+            fileRows[index].summary.textContent = 'Failed to read file';
+            fileRows[index].status.className = 'text-xs text-red-600 font-semibold';
+            fileRows[index].status.textContent = '✗ Error';
         };
         reader.readAsText(file);
     });
@@ -134,6 +122,12 @@ function clearFileList() {
     }
     const statusEl = document.getElementById('upload-status');
     if (statusEl) statusEl.classList.add('hidden');
+    const fileListEl = document.getElementById('file-list');
+    if (fileListEl) fileListEl.innerHTML = '';
+    const filesInfoEl = document.getElementById('files-selected-info');
+    if (filesInfoEl) filesInfoEl.textContent = '';
+    const progressText = document.getElementById('upload-progress-text');
+    if (progressText) progressText.textContent = '';
 
     const uploadZone = document.getElementById('upload-zone');
     if (uploadZone) uploadZone.classList.remove('has-file');
@@ -164,42 +158,60 @@ async function processExamUpload() {
             showAlert(`📖 Processing ${i + 1}/${pendingUploadFiles.length}: ${file.name}...`, 'info', 3000);
 
             const content = await readFileAsText(file);
-            let exam = parseCSVWithBetterHandling(content);
+            
+            // ─── SMART DETECTION ───
+            // Check if the file has multiple rows (Package file) or is a single exam
+            const lineCount = content.split('\n').filter(l => l.trim().length > 0).length;
+            let examsToSave = [];
 
-            exam = normalizeExamData(exam);
-            const validationError = validateExamStructure(exam);
-
-            if (validationError) {
-                throw new Error(`Validation failed: ${validationError.substring(0, 100)}`);
+            if (lineCount > 2) {
+                // It's a multi-row package file!
+                console.log(`📦 Detected multi-exam package (${lineCount} rows)`);
+                examsToSave = parsePackageCSV(content);
+            } else {
+                // It's a single exam file
+                console.log(`📄 Detected single-exam file`);
+                const singleExam = parseCSVWithBetterHandling(content);
+                examsToSave = [singleExam];
             }
 
-            totalQuestionsUploaded += exam.questions?.length || 0;
+            // Loop through whatever exams we found in this file
+            for (const rawExam of examsToSave) {
+                let exam = normalizeExamData(rawExam);
+                const validationError = validateExamStructure(exam);
 
-            const existing = state.availableExams.find(e => e.exam_id === exam.exam_id);
-            if (existing) {
-                const replace = confirm(
-                    `⚠️ Exam "${exam.exam_id}" already exists!\n\n` +
-                    `Subject: ${existing.subject}\n` +
-                    `Current: ${existing.questions.length} questions\n` +
-                    `New: ${exam.questions.length} questions\n\n` +
-                    `Replace existing exam?`
-                );
-
-                if (!replace) {
-                    skipped++;
-                    continue;
+                if (validationError) {
+                    throw new Error(`Validation failed: ${validationError.substring(0, 100)}`);
                 }
 
-                await deleteExamFromDB(exam.exam_id);
+                totalQuestionsUploaded += exam.questions?.length || 0;
+
+                const existing = state.availableExams.find(e => e.exam_id === exam.exam_id);
+                if (existing) {
+                    const replace = confirm(
+                        `⚠️ Exam "${exam.exam_id}" already exists!\n\n` +
+                        `Subject: ${existing.subject}\n` +
+                        `Current: ${existing.questions.length} questions\n` +
+                        `New: ${exam.questions.length} questions\n\n` +
+                        `Replace existing exam?`
+                    );
+
+                    if (!replace) {
+                        skipped++;
+                        continue;
+                    }
+
+                    await deleteExamFromDB(exam.exam_id);
+                }
+
+                exam.created_by = state.user?.phone_number || state.user?.name || 'exam_office';
+                exam.created_date = new Date().toISOString().split('T')[0];
+
+                await saveExamToDB(exam);
+                successful++;
             }
-
-            exam.created_by = state.user?.phone_number || state.user?.name || 'exam_office';
-            exam.created_date = new Date().toISOString().split('T')[0];
-
-            await saveExamToDB(exam);
-
-            successful++;
-            showAlert(`✅ "${exam.subject}" uploaded successfully!`, 'success', 2000);
+            
+            showAlert(`✅ "${file.name}" processed successfully!`, 'success', 2000);
 
         } catch (error) {
             console.error(`❌ Upload failed for ${file.name}:`, error);
@@ -224,7 +236,7 @@ async function processExamUpload() {
     if (successful > 0) summary += `✅ ${successful} exam(s) uploaded successfully\n`;
     if (skipped > 0) summary += `⏭️ ${skipped} exam(s) skipped (already exist)\n`;
     if (failed > 0) {
-        summary += `❌ ${failed} exam(s) failed:\n`;
+        summary += `❌ ${failed} file(s) failed to process:\n`;
         failedDetails.forEach(d => summary += `   • ${d}\n`);
     }
 
@@ -264,7 +276,7 @@ async function importMultipleExams(files) {
         skipped: []
     };
     
-    showAlert(`📚 Importing ${files.length} exam(s)...`, 'info', 3000);
+    showAlert(`📚 Importing ${files.length} file(s)...`, 'info', 3000);
     
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -274,41 +286,54 @@ async function importMultipleExams(files) {
             showAlert(`📖 Importing ${i + 1}/${files.length}: ${file.name}...`, 'info', 2000);
             
             const content = await readFileAsText(file);
-            let exam = parseCSVWithBetterHandling(content);
             
-            if (!exam.questions || exam.questions.length === 0) {
-                throw new Error('No questions found in file');
+            // SMART DETECTION: Handle both single exams and multi-exam packages
+            const lineCount = content.split('\n').filter(l => l.trim().length > 0).length;
+            let examsToSave = [];
+
+            if (lineCount > 2) {
+                console.log(`📦 Detected multi-exam package (${lineCount} rows)`);
+                examsToSave = parsePackageCSV(content);
+            } else {
+                console.log(`📄 Detected single-exam file`);
+                const singleExam = parseCSVWithBetterHandling(content);
+                examsToSave = [singleExam];
             }
-            
-            exam = normalizeExamData(exam);
-            const validationError = validateExamStructure(exam);
-            if (validationError) {
-                throw new Error(`Validation failed: ${validationError.substring(0, 100)}...`);
-            }
-            
-            const existing = state.availableExams.find(e => e.exam_id === exam.exam_id);
-            if (existing) {
-                results.skipped.push({
+
+            // Loop through and save each exam found in this file
+            for (const rawExam of examsToSave) {
+                let exam = normalizeExamData(rawExam);
+                const validationError = validateExamStructure(exam);
+                
+                if (validationError) {
+                    throw new Error(`Validation failed: ${validationError.substring(0, 100)}...`);
+                }
+                
+                const existing = state.availableExams.find(e => e.exam_id === exam.exam_id);
+                if (existing) {
+                    // If it already exists, skip it during batch imports to be safe
+                    results.skipped.push({
+                        file: file.name,
+                        examId: exam.exam_id,
+                        reason: 'Already exists (skipped)'
+                    });
+                    continue;
+                }
+                
+                exam.created_by = state.user?.phone_number || 'teacher';
+                exam.created_date = new Date().toISOString().split('T')[0];
+                
+                await saveExamToDB(exam);
+                
+                results.successful.push({
                     file: file.name,
                     examId: exam.exam_id,
-                    reason: 'Already exists'
+                    subject: exam.subject,
+                    questionCount: exam.questions.length
                 });
-                continue;
+                
+                console.log(`✅ Successfully imported: ${exam.exam_id}`);
             }
-            
-            exam.created_by = state.user?.phone_number || 'teacher';
-            exam.created_date = new Date().toISOString().split('T')[0];
-            
-            await saveExamToDB(exam);
-            
-            results.successful.push({
-                file: file.name,
-                examId: exam.exam_id,
-                subject: exam.subject,
-                questionCount: exam.questions.length
-            });
-            
-            console.log(`✅ Successfully imported: ${exam.exam_id}`);
             
         } catch (error) {
             console.error(`❌ Failed to import ${file.name}:`, error);
@@ -324,7 +349,7 @@ async function importMultipleExams(files) {
     await loadExams();
     showImportResults(results);
     
-    if (state.currentPage === 'teacher') {
+    if (state.currentPage === 'teacher' || state.currentPage === 'exam-office-upload') {
         render();
     }
 }
@@ -479,7 +504,7 @@ async function exportMultipleExams(examIds) {
         
         try {
             const csvContent = jsonToCsv(exam);
-            const fileName = `${exam.subject.replace(/[^a-z0-9]/gi, '_')}_${exam.class}_Exam.csv`;
+            const fileName = `${exam.subject.replace(/[^a-z0-9]/gi, '_')}_${String(exam.class).replace(/[^a-z0-9]/gi, '_')}_Exam.csv`;
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             
             filesToShare.push({
@@ -510,124 +535,73 @@ async function exportMultipleExams(examIds) {
 
 async function shareMultipleFiles(filesToShare, results) {
     const totalFiles = filesToShare.length;
+    
+    // Check if it's a desktop browser (no touch, large screen)
+    const isDesktop = !('ontouchstart' in window) && navigator.maxTouchPoints === 0;
 
-    try {
-        if (window.Capacitor && window.Capacitor.Plugins) {
-            const Plugins = window.Capacitor.Plugins;
-            const Filesystem = Plugins.Filesystem;
-            const Share = Plugins.Share;
-
-            if (Filesystem && Share) {
-                console.log('📱 Using Capacitor for multiple files');
-
-                const fileUris = [];
-                for (const fileData of filesToShare) {
-                    const result = await Filesystem.writeFile({
-                        path: fileData.fileName,
-                        data: await fileData.blob.text(),
-                        directory: Filesystem.Directory?.Cache || 'CACHE',
-                        encoding: Filesystem.Encoding?.UTF8 || 'utf8'
-                    });
-                    fileUris.push(result.uri);
-                }
-
-                await Share.share({
-                    title: `${totalFiles} Exam Files`,
-                    text: `Sharing ${totalFiles} exam(s)`,
-                    files: fileUris
-                });
-
-                showAlert(`✅ ${totalFiles} exam(s) shared successfully!`, 'success', 3000);
-                return;
-            }
+    if (isDesktop) {
+        // Desktop fallback: just download all files
+        console.log('💻 Desktop detected. Downloading files...');
+        for (let i = 0; i < filesToShare.length; i++) {
+            downloadCSVFallback(filesToShare[i].blob, filesToShare[i].fileName, true);
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
+        showAlert(`✅ ${totalFiles} exam(s) downloaded!\n\n📂 Check your Downloads folder.`, 'success', 6000);
+        return;
+    }
 
-        if (navigator.share && navigator.canShare) {
-            console.log('🌐 Trying Web Share API for multiple files');
+    // Mobile: Try Capacitor share
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share) {
+        try {
+            const { Filesystem, Share } = window.Capacitor.Plugins;
+            const fileUris = [];
+            
+            for (const fileData of filesToShare) {
+                const result = await Filesystem.writeFile({
+                    path: fileData.fileName,
+                    data: await fileData.blob.text(),
+                    directory: Filesystem.Directory?.Cache || 'CACHE',
+                    encoding: Filesystem.Encoding?.UTF8 || 'utf8'
+                });
+                fileUris.push(result.uri);
+            }
 
-            const files = await Promise.all(
-                filesToShare.map(async (fileData) => {
-                    return new File([fileData.blob], fileData.fileName, { type: 'text/csv' });
-                })
-            );
+            await Share.share({
+                title: `${totalFiles} Exam Files`,
+                text: `Sharing ${totalFiles} exam(s)`,
+                files: fileUris
+            });
+            showAlert(`✅ ${totalFiles} exam(s) shared successfully!`, 'success', 3000);
+            return;
+        } catch (err) {
+            console.error('Capacitor share error:', err);
+        }
+    }
 
+    // Mobile: Try Web Share API
+    if (navigator.share && navigator.canShare) {
+        try {
+            const files = filesToShare.map(f => new File([f.blob], f.fileName, { type: 'text/csv' }));
             if (navigator.canShare({ files })) {
                 await navigator.share({
                     files,
                     title: `${totalFiles} Exam Files`,
                     text: `Sharing ${totalFiles} exam(s)`
                 });
-
                 showAlert(`✅ ${totalFiles} exam(s) shared successfully!`, 'success', 3000);
                 return;
             }
+        } catch (err) {
+            if (err.name !== 'AbortError') console.warn('Web Share failed', err);
         }
-
-        if (navigator.share) {
-            console.log('🔄 Sharing files sequentially...');
-
-            for (let i = 0; i < filesToShare.length; i++) {
-                const fileData = filesToShare[i];
-
-                showAlert(
-                    `📤 Share ${i + 1}/${totalFiles}\n${fileData.exam.subject}`,
-                    'info',
-                    2000
-                );
-
-                const file = new File([fileData.blob], fileData.fileName, { type: 'text/csv' });
-
-                try {
-                    await navigator.share({
-                        files: [file],
-                        title: fileData.exam.subject,
-                        text: `${fileData.exam.subject} - ${fileData.exam.class}`
-                    });
-
-                    if (i < filesToShare.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                } catch (shareError) {
-                    if (shareError.name === 'AbortError') {
-                        const continueSharing = confirm(
-                            `Share cancelled. ${totalFiles - i - 1} files remaining.\n\nContinue sharing?`
-                        );
-                        if (!continueSharing) break;
-                    } else {
-                        throw shareError;
-                    }
-                }
-            }
-
-            showAlert(`✅ Export complete!`, 'success', 3000);
-            return;
-        }
-
-    } catch (error) {
-        console.error('❌ Sharing failed:', error);
-        console.log('💾 Falling back to download...');
     }
 
-    console.log('💾 Downloading all files...');
-    showAlert(`📥 Downloading ${totalFiles} file(s)...`, 'info', 2000);
-
+    // Final fallback: download all
     for (let i = 0; i < filesToShare.length; i++) {
-        const fileData = filesToShare[i];
-
-        downloadCSVFallback(fileData.blob, fileData.fileName, true);
-
+        downloadCSVFallback(filesToShare[i].blob, filesToShare[i].fileName, true);
         await new Promise(resolve => setTimeout(resolve, 300));
     }
-
-    showAlert(
-        `✅ ${totalFiles} exam(s) downloaded!\n\n` +
-        `📂 Check your Downloads folder\n` +
-        `📤 You can now share them via any app`,
-        'success',
-        6000
-    );
-
-    console.log(`✅ ${totalFiles} files downloaded successfully`);
+    showAlert(`✅ ${totalFiles} exam(s) downloaded!\n\n📂 Check your Downloads folder.`, 'success', 6000);
 }
 
 // Helper: escape double quotes in a CSV field value
@@ -1236,29 +1210,7 @@ async function exportAllExamsWithDates() {
  * Generate CSV with scheduled date included
  */
 function jsonToCsvWithDate(exam) {
-    // Add scheduled_date to the headers
-    const headers = ['exam_id', 'subject', 'class', 'duration', 'scheduled_date', 'questions_json'];
-    
-    const questionsSafe = JSON.stringify(exam.questions.map(q => ({
-        ...q,
-        options: q.options && q.options.length > 0 
-            ? q.options 
-            : ["Option A", "Option B", "Option C", "Option D"]
-    })));
-    
-    // Include scheduledDate (or empty string if not set)
-    const scheduledDate = exam.scheduledDate || '';
-    
-    const row = [
-        `"${exam.exam_id}"`,
-        `"${exam.subject}"`,
-        `"${exam.class}"`,
-        `"${exam.duration || 30}"`,
-        `"${scheduledDate}"`,
-        `"${questionsSafe.replace(/"/g, '""')}"`
-    ];
-    
-    return headers.join(',') + '\n' + row.join(',');
+    return jsonToCsv(exam);
 }
 
 /**
@@ -1268,87 +1220,17 @@ function jsonToCsvWithDate(exam) {
  * Download or share a CSV file — Capacitor native share first, then Web Share, then download
  */
 async function downloadOrShareCSV(csvContent, fileName, title) {
-    // 1. CAPACITOR NATIVE SHARE (highest priority on mobile)
-    if (window.Capacitor && window.Capacitor.Plugins) {
-        const Plugins = window.Capacitor.Plugins;
-        const Filesystem = Plugins.Filesystem;
-        const Share = Plugins.Share;
-
-        if (Filesystem && Share) {
-            try {
-                console.log('📱 Using Capacitor native share');
-                const result = await Filesystem.writeFile({
-                    path: fileName,
-                    data: csvContent,
-                    directory: Filesystem.Directory?.Cache || 'CACHE',
-                    encoding: Filesystem.Encoding?.UTF8 || 'utf8'
-                });
-
-                await Share.share({
-                    title: title,
-                    text: title,
-                    files: [result.uri]
-                });
-
-                showAlert('✅ Shared successfully!', 'success', 3000);
-                return;
-            } catch (err) {
-                console.error('Capacitor share error:', err);
-                // fall through to web share / download
-            }
-        }
-    }
-
-    // 2. WEB SHARE API (browsers)
-    if (navigator.share) {
-        try {
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const file = new File([blob], fileName, { type: 'text/csv' });
-
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    files: [file],
-                    title: title,
-                    text: title
-                });
-                showAlert('✅ Shared successfully!', 'success', 3000);
-                return;
-            }
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.warn('Web Share failed:', err);
-            } else {
-                return;
-            }
-        }
-    }
-
-    // 3. FALLBACK: DOWNLOAD
+    // Exam Office: Always download directly to device storage
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    showAlert(`✅ "${fileName}" downloaded!\n\n📂 Check your Downloads folder.`, 'success', 4000);
+    
+    // Call the helper function that triggers the download
+    downloadCSVFallback(blob, fileName, false); // 'false' shows the success alert
 }
 
 /**
  * Parse CSV with scheduled date support (updated from original)
  */
-/**
- * Parse CSV with smart format detection.
- * Handles:
- *   1. Old format:  exam_id,subject,class,duration,questions_json
- *   2. New format:  exam_id,subject,class,duration,assessment_type,questions_json
- *   3. Date format: exam_id,subject,class,duration,scheduled_date,questions_json
- *   4. Master format: exam_id,subject,class,duration,assessment_type,scheduled_date,created_by,questions_json
- */
-function parseCSVWithBetterHandling(csvText) {
+function parseCSVWithBetterHandlingAndDate(csvText) {
     const rows = [];
     let currentLine = "";
     let inQuotes = false;
@@ -1367,61 +1249,36 @@ function parseCSVWithBetterHandling(csvText) {
 
     if (rows.length < 2) throw new Error('File appears to be empty or invalid.');
 
-    // ---------- Read header to detect format ----------
-    const header = parseCSVLine(rows[0]).map(h => h.trim().toLowerCase());
-
-    const idx = {
-        exam_id:          header.indexOf('exam_id'),
-        subject:          header.indexOf('subject'),
-        class:            header.indexOf('class'),
-        duration:         header.indexOf('duration'),
-        questions_json:   header.indexOf('questions_json'),
-        assessment_type:  header.indexOf('assessment_type'),
-        scheduled_date:   header.indexOf('scheduled_date'),
-        created_by:       header.indexOf('created_by'),
-    };
-
-    // questions_json column MUST exist — otherwise it's not a valid export
-    if (idx.questions_json === -1) {
-        throw new Error('Missing questions_json column — file was not exported from this app.');
-    }
-
-    // ---------- Parse first data row ----------
-    const first = parseCSVLine(rows[1]);
+    const firstDataRow = parseCSVLine(rows[1]);
+    
+    // Check if this is the new format with scheduled_date
+    const hasScheduledDate = firstDataRow.length >= 5 && firstDataRow[4] && !firstDataRow[4].startsWith('[') && !firstDataRow[4].startsWith('"[');
+    
+    // The json column is either at index 4 (old format) or index 5 (new format)
+    const jsonColumnIndex = hasScheduledDate ? 5 : 4;
+    const jsonColumn = firstDataRow[jsonColumnIndex] ? firstDataRow[jsonColumnIndex].trim() : "";
+    const isImmortalFormat = jsonColumn.startsWith('[') || jsonColumn.startsWith('"[');
 
     const exam = {
-        exam_id:         first[idx.exam_id]   || 'N/A',
-        subject:         first[idx.subject]   || 'Unknown Subject',
-        class:           first[idx.class]     || 'Unknown Class',
-        duration:        parseInt(first[idx.duration]) || 30,
-        assessmentType:  idx.assessment_type !== -1
-                            ? (first[idx.assessment_type] || 'EXAM').toUpperCase().trim()
-                            : 'EXAM',
-        scheduledDate:   idx.scheduled_date !== -1
-                            ? (first[idx.scheduled_date] || null)
-                            : null,
-        created_by:      idx.created_by !== -1 ? (first[idx.created_by] || '') : '',
+        exam_id: firstDataRow[0] || 'N/A',
+        subject: firstDataRow[1] || 'Unknown Subject',
+        class: firstDataRow[2] || 'Unknown Class',
+        duration: parseInt(firstDataRow[3]) || 30,
+        scheduledDate: hasScheduledDate ? firstDataRow[4] || null : null,
         questions: []
     };
 
-    // ---------- Parse questions_json ----------
-    let jsonColumn = first[idx.questions_json] ? first[idx.questions_json].trim() : '';
-
-    // Strip surrounding quotes if any (CSV writers sometimes double-quote)
-    if (jsonColumn.startsWith('"') && jsonColumn.endsWith('"')) {
-        jsonColumn = jsonColumn.substring(1, jsonColumn.length - 1).replace(/""/g, '"');
-    }
-
-    if (jsonColumn.startsWith('[')) {
-        // Immortal / JSON-in-one-cell format
+    if (isImmortalFormat) {
         try {
-            exam.questions = JSON.parse(jsonColumn);
+            let cleanJson = jsonColumn;
+            if (cleanJson.startsWith('"') && cleanJson.endsWith('"')) {
+                cleanJson = cleanJson.substring(1, cleanJson.length - 1).replace(/""/g, '"');
+            }
+            exam.questions = JSON.parse(cleanJson);
         } catch (e) {
-            throw new Error('The questions JSON data is corrupted.');
+            throw new Error("The immortal JSON data is corrupted.");
         }
     } else {
-        // Legacy row-per-question format (no header-based JSON)
-        // This is very old — we try our best.
         for (let i = 1; i < rows.length; i++) {
             const row = parseCSVLine(rows[i]);
             if (row.length < 8) continue;
@@ -1429,14 +1286,10 @@ function parseCSVWithBetterHandling(csvText) {
                 id: row[5] || Date.now() + i,
                 type: row[6] || 'multiple_choice',
                 question: row[7],
-                options: [row[8], row[9], row[10], row[11]].filter(Boolean),
+                options: [row[8], row[9], row[10], row[11]],
                 correct_answer: row[12]
             });
         }
-    }
-
-    if (!Array.isArray(exam.questions) || exam.questions.length === 0) {
-        throw new Error('No questions were found in the file.');
     }
 
     return exam;
@@ -1494,9 +1347,11 @@ async function exportAllExamsSingleFile() {
         const scheduleSummary = [];
         
         exams.forEach(exam => {
-            const questionsJson = JSON.stringify(exam.questions).replace(/"/g, '""');
             const assessmentType = exam.assessmentType || 'EXAM';
             const scheduledDate = exam.scheduledDate || '';
+            
+            // Correctly parse questions array to a JSON string and escape quotes for CSV
+            const questionsJson = JSON.stringify(exam.questions || []).replace(/"/g, '""');
             
             if (assessmentType === 'CA') {
                 caCount++;
@@ -1511,10 +1366,11 @@ async function exportAllExamsSingleFile() {
                 }
             }
             
+            // Manually construct the row to ensure NO commas or newlines in the JSON break the CSV
             const row = [
-                `"${exam.exam_id}"`,
-                `"${exam.subject}"`,
-                `"${exam.class}"`,
+                `"${escapeCsvField(exam.exam_id)}"`,
+                `"${escapeCsvField(exam.subject)}"`,
+                `"${escapeCsvField(exam.class)}"`,
                 `"${exam.duration || 30}"`,
                 `"${assessmentType}"`,
                 `"${scheduledDate}"`,
@@ -1531,31 +1387,6 @@ async function exportAllExamsSingleFile() {
         const fileName = `${schoolShortName}_AllExams_${today}.csv`;
         
         console.log(`📄 Package created: ${fileName} (${csvContent.length} bytes)`);
-        
-        // Save to archive BEFORE sharing
-        // try {
-        //     const archiveId = `archive_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        //     const archive = {
-        //         archive_id: archiveId,
-        //         filename: fileName,
-        //         exported_at: new Date().toISOString(),
-        //         exam_count: exams.length,
-        //         ca_count: caCount,
-        //         exam_count_scheduled: examCount,
-        //         csv_content: csvContent,
-        //         exams_summary: exams.map(e => ({
-        //             exam_id: e.exam_id,
-        //             subject: e.subject,
-        //             class: e.class,
-        //             assessment_type: e.assessmentType || 'EXAM',
-        //             scheduled_date: e.scheduledDate || null
-        //         }))
-        //     };
-        //     await saveArchiveToDB(archive);
-        //     console.log('✅ Archive saved:', archiveId);
-        // } catch (archiveErr) {
-        //     console.warn('⚠️ Could not save to archive (continuing with export):', archiveErr);
-        // }
         
         // Share/download
         await downloadOrShareCSV(csvContent, fileName, `${exams.length} Exams Package`);
@@ -1575,9 +1406,6 @@ async function exportAllExamsSingleFile() {
         }
         
         setTimeout(() => showAlert(summaryMsg, 'success', 8000), 1000);
-        
-        // ⏸️ Archive list refresh DISABLED — to be re-enabled in a later version
-        // await loadArchives();
         render();
         
     } catch (error) {
@@ -1620,7 +1448,8 @@ function parsePackageCSV(csvText) {
         duration: header.indexOf('duration'),
         assessment_type: header.indexOf('assessment_type'),
         scheduled_date: header.indexOf('scheduled_date'),
-        questions_json: header.indexOf('questions_json')
+        questions_json: header.indexOf('questions_json'),
+        created_by: header.indexOf('created_by')
     };
     
     // Validate header
@@ -1634,7 +1463,7 @@ function parsePackageCSV(csvText) {
         const cols = parseCSVLine(rows[i]);
         
         const examId = cols[colIndex.exam_id] || '';
-        if (!examId) continue; // Skip empty rows
+        if (!examId) continue;
         
         const questionsJson = cols[colIndex.questions_json] || '';
         let questions = [];
@@ -1653,6 +1482,7 @@ function parsePackageCSV(csvText) {
         
         const assessmentType = (cols[colIndex.assessment_type] || 'EXAM').toUpperCase().trim();
         const scheduledDate = cols[colIndex.scheduled_date] || '';
+        const createdBy = colIndex.created_by !== -1 ? (cols[colIndex.created_by] || '') : 'package_import';
         
         exams.push({
             exam_id: examId,
@@ -1663,7 +1493,7 @@ function parsePackageCSV(csvText) {
             scheduledDate: scheduledDate || null,
             questions: questions,
             created_date: new Date().toISOString().split('T')[0],
-            created_by: 'package_import'
+            created_by: createdBy
         });
     }
     
@@ -1972,7 +1802,148 @@ function handleImportArchive() {
     }
 }
 
-// Add to exports
+// ========================================
+// BULK SCHEDULE & DELETE (EXAM OFFICE)
+// ========================================
+
+let selectedScheduleExams = new Set();
+
+function handleScheduleCheckboxChange(checkbox) {
+    const examId = checkbox.dataset.examId;
+    const card = checkbox.closest('.schedule-exam-item');
+    
+    if (checkbox.checked) {
+        selectedScheduleExams.add(examId);
+        if (card) card.classList.add('ring-2', 'ring-purple-500', 'bg-purple-50');
+    } else {
+        selectedScheduleExams.delete(examId);
+        if (card) card.classList.remove('ring-2', 'ring-purple-500', 'bg-purple-50');
+    }
+    
+    updateBulkScheduleUI();
+}
+
+function updateBulkScheduleUI() {
+    const count = selectedScheduleExams.size;
+    const toolbar = document.getElementById('bulk-schedule-toolbar');
+    const countBadge = document.getElementById('bulk-schedule-count');
+    
+    if (toolbar) {
+        if (count > 0) {
+            toolbar.classList.remove('hidden');
+            toolbar.classList.add('flex');
+            if (countBadge) countBadge.textContent = `${count} exam(s) selected`;
+        } else {
+            toolbar.classList.add('hidden');
+            toolbar.classList.remove('flex');
+        }
+    }
+}
+
+function openBulkScheduleModal() {
+    if (selectedScheduleExams.size === 0) return;
+    
+    document.getElementById('bulkScheduleModalTitle').textContent = `Schedule ${selectedScheduleExams.size} Exam(s)`;
+    document.getElementById('bulk-schedule-date-picker').value = '';
+    document.getElementById('bulkScheduleModal').classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeBulkScheduleModal() {
+    document.getElementById('bulkScheduleModal').classList.add('hidden');
+}
+
+async function saveBulkSchedule(event) {
+    event.preventDefault();
+    const date = document.getElementById('bulk-schedule-date-picker').value;
+    
+    if (!date) {
+        showAlert('Please select a date', 'error');
+        return;
+    }
+    
+    try {
+        let scheduledCount = 0;
+        
+        for (const examId of selectedScheduleExams) {
+            const exam = state.availableExams.find(e => e.exam_id === examId);
+            if (exam) {
+                exam.scheduledDate = date;
+                await saveExamToDB(exam);
+                scheduledCount++;
+            }
+        }
+        
+        await loadExams();
+        showAlert(`✅ ${scheduledCount} exam(s) scheduled for ${new Date(date).toLocaleDateString()}`, 'success');
+        
+        selectedScheduleExams.clear();
+        updateBulkScheduleUI();
+        closeBulkScheduleModal();
+        render(); // Refresh the page
+        
+    } catch (err) {
+        console.error('Bulk schedule error:', err);
+        showAlert('Failed to schedule exams', 'error');
+    }
+}
+
+async function deleteSelectedExamsFromExamOffice() {
+    if (selectedScheduleExams.size === 0) return;
+    
+    const count = selectedScheduleExams.size;
+    const examWord = count === 1 ? 'exam' : 'exams';
+    
+    if (!confirm(`⚠️ Are you sure you want to delete ${count} ${examWord}?\n\nThis will permanently remove them from the system. This action CANNOT be undone.`)) {
+        return;
+    }
+    
+    try {
+        let deleted = 0;
+        for (const examId of selectedScheduleExams) {
+            await deleteExamFromDB(examId);
+            // Remove from state
+            state.availableExams = state.availableExams.filter(e => e.exam_id !== examId);
+            deleted++;
+        }
+        
+        showAlert(`✅ Successfully deleted ${deleted} ${examWord}`, 'success', 3000);
+        
+        // Clear selection and update UI
+        selectedScheduleExams.clear();
+        updateBulkScheduleUI();
+        render();
+        
+    } catch (err) {
+        console.error('Bulk delete error:', err);
+        showAlert('Failed to delete exams', 'error');
+    }
+}
+
+async function deleteExamFromExamOffice(examId, examSubject) {
+    if (!confirm(`⚠️ Are you sure you want to delete "${examSubject}"?\n\nThis will remove the exam completely from the system.`)) {
+        return;
+    }
+    
+    try {
+        await deleteExamFromDB(examId);
+        state.availableExams = state.availableExams.filter(e => e.exam_id !== examId);
+        selectedScheduleExams.delete(examId);
+        
+        showAlert(`✅ "${examSubject}" deleted successfully`, 'success');
+        render();
+    } catch (err) {
+        console.error('Delete exam error:', err);
+        showAlert('Failed to delete exam', 'error');
+    }
+}
+
+// Add these to window exports at the bottom of the file:
+window.handleScheduleCheckboxChange = handleScheduleCheckboxChange;
+window.openBulkScheduleModal = openBulkScheduleModal;
+window.closeBulkScheduleModal = closeBulkScheduleModal;
+window.saveBulkSchedule = saveBulkSchedule;
+window.deleteExamFromExamOffice = deleteExamFromExamOffice;
 window.importArchiveFromFile = importArchiveFromFile;
 window.handleImportArchive = handleImportArchive;
 window.pendingUploadFiles = pendingUploadFiles;
@@ -2012,3 +1983,5 @@ window.loadArchives = loadArchives;
 window.downloadArchive = downloadArchive;
 window.deleteArchive = deleteArchive;
 window.toggleArchiveSection = toggleArchiveSection;
+
+window.deleteSelectedExamsFromExamOffice = deleteSelectedExamsFromExamOffice;
