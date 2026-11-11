@@ -1,31 +1,32 @@
 name: Build Desktop App
 
 on:
+  workflow_dispatch:  # Allows you to manually click build from GitHub page
   push:
     tags:
-      - 'v*' # Trigger release only when a version tag is pushed
+      - 'v*'          # Also triggers when pushing version tags like v1.0.0
 
 jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          
+
       - name: Install dependencies
         run: npm ci
-        
-      - name: Build Electron App
+
+      - name: Build Electron app
         run: npx electron-builder --publish never
-          
-      - name: Upload Artifacts
+
+      - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.os }}
