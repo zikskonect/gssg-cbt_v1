@@ -6,39 +6,44 @@
 
 const SCHOOL_CONFIG = {
     // ─── School Identity ─────────────────────────────────
-    schoolName: 'Government Science Secondary School, Abuja',
-    schoolShortName: 'GSSS',
-    tagline: 'Education for Positive Change',
+    schoolName: 'Government Secondary School, Gwagwalada',
+    schoolShortName: 'GSS GWAGS',
+    tagline: 'Learning for Service',
     subtitle: 'Offline Examination Platform',
 
     // ─── Logo ────────────────────────────────────────────
     // Path is relative to the www/ folder
     logoPath: 'js/icons/128x128.png',
-    logoAlt: 'GSSS Logo',   // fallback alt text
 
-    // ─── Contact ─────────────────────────────────────────
-    supportEmail: 'support@gsss.edu.ng',
+    // ─── Home Page Background Image ──────────────────────
+    // Path is relative to the www/ folder.
+    // Leave as '' (empty string) to disable the background image.
+    homeBgImage: 'assets/home/gss-app.jpg',
+    homeBgOpacity: 0.15,   // 0.0 = invisible, 1.0 = full opacity
+
+    // ─── Contact Information ─────────────────────────────
+    supportEmail: 'gssgwagwalada2024@gmail.com',
     supportPhone: '+234 800 123 4567',
-    addressLine: 'Tungan Maje, Abuja, Nigeria',
+    addressLine: 'Gwagwalada, Abuja, Nigeria',
 
     // ─── Branding Colours ────────────────────────────────
     // These drive the home page AND all major UI accents.
-    themeColor: '#B80236',       // main brand colour (maroon)
-    secondaryColor: '#8a0228',   // darker shade for gradients
-    accentColor: '#7e22ce',      // exam-office purple
-    neutralDark: '#1f2937',      // text
-    neutralLight: '#f9fafb',     // page background
+    themeColor: '#0311d8',
+    secondaryColor: '#41cffa',
+    accentColor: '#7e22ce',
+    neutralDark: '#1f2937',
+    neutralLight: '#f9fafb',
 
     // ─── Feature Flags ───────────────────────────────────
     enableScheduling: true,
 
     // ─── Assessment Configuration ────────────────────────
-    assessmentTypes: {
+   assessmentTypes: {
         CA: {
             label: 'Continuous Assessment',
             shortLabel: 'CA',
             maxQuestions: 20,
-            defaultDuration: 30,
+            defaultDuration: 5,
             icon: 'clipboard-check',
             color: '#720316',
             bgColor: 'bg-emerald-100',
@@ -47,10 +52,10 @@ const SCHOOL_CONFIG = {
         EXAM: {
             label: 'Examination',
             shortLabel: 'Exam',
-            maxQuestions: 100,
-            defaultDuration: 120,
+            maxQuestions: 200,
+            defaultDuration: 30,
             icon: 'graduation-cap',
-            color: '#B80236',
+            color: '#2563EB',
             bgColor: 'bg-rose-100',
             textColor: 'text-rose-700',
         }
@@ -61,12 +66,14 @@ const SCHOOL_CONFIG = {
 // Any page can call these directly. They always return
 // the current value from SCHOOL_CONFIG (no caching).
 
-window.getSchoolName = () => SCHOOL_CONFIG.schoolName;
-window.getSchoolShortName = () => SCHOOL_CONFIG.schoolShortName;
-window.getSchoolLogo = () => SCHOOL_CONFIG.logoPath;
-window.getSchoolTagline = () => SCHOOL_CONFIG.tagline;
-window.getThemeColor = () => SCHOOL_CONFIG.themeColor;
-window.getSecondaryColor = () => SCHOOL_CONFIG.secondaryColor;
-window.getAccentColor = () => SCHOOL_CONFIG.accentColor;
+window.getSchoolName       = () => SCHOOL_CONFIG.schoolName;
+window.getSchoolShortName  = () => SCHOOL_CONFIG.schoolShortName;
+window.getSchoolCode       = () => SCHOOL_CONFIG.schoolCode;
+window.getSchoolLogo       = () => SCHOOL_CONFIG.logoPath;
+window.getSchoolTagline    = () => SCHOOL_CONFIG.tagline;
+window.getThemeColor       = () => SCHOOL_CONFIG.themeColor;
+window.getSecondaryColor   = () => SCHOOL_CONFIG.secondaryColor;
+window.getAccentColor      = () => SCHOOL_CONFIG.accentColor;
+window.getAcademicYear     = () => SCHOOL_CONFIG.academicYear;
 
 window.SCHOOL_CONFIG = SCHOOL_CONFIG;

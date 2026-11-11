@@ -787,19 +787,12 @@ async function saveExam(event) {
 async function shareExamAsCSV(examId) {
     const exam = state.availableExams.find(e => e.exam_id === examId);
 
-    if (!exam) {
-        showAlert('Exam not found.', 'error');
-        return;
-    }
-
-    if (!exam.questions || exam.questions.length === 0) {
-        showAlert('This exam has no questions to export.', 'error');
+    if (!exam || !exam.questions || exam.questions.length === 0) {
+        showAlert('Exam not found or has no questions.', 'error');
         return;
     }
 
     try {
-        console.log(`📤 Exporting exam: ${exam.exam_id} (${exam.questions.length} questions)`);
-
         const headers = ['exam_id', 'subject', 'class', 'duration', 'assessment_type', 'questions_json'];
         const questionsJson = JSON.stringify(exam.questions).replace(/"/g, '""');
 
@@ -814,46 +807,45 @@ async function shareExamAsCSV(examId) {
 
         const csvContent = headers.join(',') + '\n' + dataRow.join(',');
         const fileName = `${exam.subject.replace(/[^a-z0-9]/gi, '_')}_${exam.class}_Exam.csv`;
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 
-        // 1. CAPACITOR NATIVE SHARE (highest priority on mobile)
-        if (window.Capacitor && window.Capacitor.Plugins) {
-            console.log('📱 Detected Capacitor environment');
+        // Check if it's a desktop browser (no touch, large screen)
+        const isDesktop = !('ontouchstart' in window) && navigator.maxTouchPoints === 0;
+
+        if (isDesktop) {
+            // Desktop fallback: just download
+            downloadCSVFallback(blob, fileName, false);
+            return;
+        }
+
+        // Mobile: Capacitor native share
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share) {
             try {
-                const Plugins = window.Capacitor.Plugins;
-                const Filesystem = Plugins.Filesystem;
-                const Share = Plugins.Share;
+                const result = await window.Capacitor.Plugins.Filesystem.writeFile({
+                    path: fileName,
+                    data: csvContent,
+                    directory: window.Capacitor.Plugins.Filesystem.Directory.Cache,
+                    encoding: window.Capacitor.Plugins.Filesystem.Encoding.UTF8
+                });
 
-                if (Filesystem && Share) {
-                    // Write file to Cache directory
-                    const result = await Filesystem.writeFile({
-                        path: fileName,
-                        data: csvContent,
-                        directory: Filesystem.Directory?.Cache || 'CACHE',
-                        encoding: Filesystem.Encoding?.UTF8 || 'utf8'
-                    });
-
-                    // Native Share Sheet — use 'files' array (Capacitor v5+)
-                    await Share.share({
-                        title: `${exam.subject} Exam`,
-                        text: `Exam: ${exam.subject} (${exam.class})`,
-                        files: [result.uri]
-                    });
-
-                    showAlert('✅ Exam shared successfully!', 'success');
-                    return;
-                }
+                await window.Capacitor.Plugins.Share.share({
+                    title: `${exam.subject} Exam`,
+                    text: `Exam: ${exam.subject} (${exam.class})`,
+                    files: [result.uri]
+                });
+                showAlert('✅ Exam shared successfully!', 'success');
+                return;
             } catch (err) {
-                console.error('Capacitor native share error:', err);
+                console.error('Capacitor share failed:', err);
+                // fall through to download if share fails
             }
         }
 
-        // 2. WEB SHARE API (Modern Web Browsers & supported WebViews)
-        if (navigator.share) {
+        // Mobile: Web Share API (fallback)
+        if (navigator.share && navigator.canShare) {
             try {
-                const blob = new Blob([csvContent], { type: 'text/csv' });
                 const file = new File([blob], fileName, { type: 'text/csv' });
-
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                if (navigator.canShare({ files: [file] })) {
                     await navigator.share({
                         files: [file],
                         title: `${exam.subject} Exam`,
@@ -867,17 +859,8 @@ async function shareExamAsCSV(examId) {
             }
         }
 
-        // 3. FALLBACK FOR MOBILE WEBVIEW / DESKTOP (Triggers browser download)
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileName);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        showAlert('✅ Exam exported & downloaded successfully!', 'success', 3000);
+        // Final fallback: download
+        downloadCSVFallback(blob, fileName, false);
 
     } catch (error) {
         console.error('❌ Export error:', error);
@@ -920,10 +903,16 @@ async function handleTeacherImportClick(event) {
     }
 
     // Fallback: standard input
-    const input = document.getElementById('teacher-import-input');
+        // Fallback: standard input (created on demand so it works from any page)
+    let input = document.getElementById('teacher-import-input');
     if (!input) {
-        showAlert('Error: File picker not available.', 'error');
-        return;
+        input = document.createElement('input');
+        input.type = 'file';
+        input.id = 'teacher-import-input';
+        input.accept = '.csv,text/csv,application/csv';
+        input.style.display = 'none';
+        input.addEventListener('change', handleTeacherImportFile);
+        document.body.appendChild(input);
     }
     input.value = '';
     input.click();

@@ -1,132 +1,242 @@
-function renderHomePage() {
-    // Everything school-specific comes from SCHOOL_CONFIG (sch_config.js).
-    // To reskin for a new school, only sch_config.js needs to change — this file does not.
-    const schoolName = window.SCHOOL_CONFIG?.schoolName || 'TESTULATOR';
-    const schoolShortName = window.SCHOOL_CONFIG?.schoolShortName || 'GSSS';
-    const logoPath = window.SCHOOL_CONFIG?.logoPath || 'js/icons/sch_logo.png';
-    const primary = window.SCHOOL_CONFIG?.themeColor || '#B80236';
-    const secondary = window.SCHOOL_CONFIG?.secondaryColor || '#6d5e92';
-    const primaryHover = shadeHexColor(primary, -18);
-    const todayLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+// ─── Shared Auth Background Helper ───────────────────────
+// Renders a full-screen faded school image behind login/entry pages.
+// Pulls its values from SCHOOL_CONFIG so changing one file updates
+// every login screen (teacher, exam office, student).
+function renderAuthBackground() {
+    const bgImage   = window.SCHOOL_CONFIG?.homeBgImage   || '';
+    const bgOpacity = window.SCHOOL_CONFIG?.homeBgOpacity ?? 0.15;
+
+    if (!bgImage) return '';
 
     return `
-        <div class="fixed inset-0 flex flex-col md:flex-row overflow-hidden bg-[#F7F6F3]"
-             style="height: 100vh; height: 100dvh;">
+        <div style="
+            position: fixed;
+            inset: 0;
+            background-image: url('${bgImage}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: ${bgOpacity};
+            pointer-events: none;
+            z-index: 0;
+        "></div>
+    `;
+}
 
-            <!-- BRAND PANEL -->
-            <div class="relative flex-shrink-0 w-full md:w-[46%] h-[26%] sm:h-[27%] md:h-full bg-[#14151F] overflow-hidden flex flex-col px-6 sm:px-10 md:px-14 py-5 sm:py-6 md:py-10">
+window.renderAuthBackground = renderAuthBackground;
 
-                <!-- faint OMR-sheet dot grid -->
-                <div class="absolute inset-0 pointer-events-none opacity-[0.06]"
-                     style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 22px 22px;"></div>
-                <div class="absolute -top-24 -left-24 w-72 h-72 rounded-full blur-3xl pointer-events-none"
-                     style="background-color: ${primary}; opacity: 0.2;"></div>
 
-                <!-- Identity -->
-                <div class="relative z-10 flex items-center gap-3 md:gap-4 flex-shrink-0">
-                    <div class="relative w-11 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 flex-shrink-0">
-                        <img src="${logoPath}"
-                             alt=""
-                             class="w-11 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg md:rounded-xl object-cover border border-white/15"
-                             onerror="this.parentElement.innerHTML='<div class=&quot;w-11 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg md:rounded-xl flex items-center justify-center&quot; style=&quot;background-color:${primary}&quot;><i data-lucide=&quot;graduation-cap&quot; class=&quot;w-6 h-6 md:w-7 md:h-7 text-white&quot;></i></div>'; if(window.lucide) lucide.createIcons();">
+// ─── Home Page ───────────────────────────────────────────
+// Optional SCHOOL_CONFIG field (new):
+//   homeBgPosition  → CSS object-position for the photo, e.g. 'center 30%',
+//                     'left center', '70% 40%'. Default: 'center 35%'
+//                     (keeps buildings/faces in frame; skies get cropped first).
+function renderHomePage() {
+    const schoolName     = window.SCHOOL_CONFIG?.schoolName      || 'School';
+    const shortName      = window.SCHOOL_CONFIG?.schoolShortName || 'SCH';
+    const logoPath       = window.SCHOOL_CONFIG?.logoPath        || 'js/icons/128x128.png';
+    const themeColor     = window.SCHOOL_CONFIG?.themeColor      || '#B80236';
+    const secondaryColor = window.SCHOOL_CONFIG?.secondaryColor  || '#8a0228';
+    const tagline        = window.SCHOOL_CONFIG?.tagline         || 'Education for Positive Change';
+    const subtitle       = window.SCHOOL_CONFIG?.subtitle        || 'Offline Examination Platform';
+    const bgImage        = window.SCHOOL_CONFIG?.homeBgImage     || '';
+    const bgPosition     = window.SCHOOL_CONFIG?.homeBgPosition  || 'center 35%';
+    const year           = new Date().getFullYear();
+
+    return `
+        <style>
+            @keyframes homeKenBurns {
+                0%   { transform: scale(1.04); }
+                100% { transform: scale(1.12); }
+            }
+            @keyframes homeFadeUp {
+                0%   { opacity: 0; transform: translateY(18px); }
+                100% { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes homeFadeIn {
+                0%   { opacity: 0; }
+                100% { opacity: 1; }
+            }
+            .home-kenburns { animation: homeKenBurns 28s ease-in-out infinite alternate; will-change: transform; }
+            .home-fade-up  { opacity: 0; animation: homeFadeUp .7s cubic-bezier(.2,.7,.2,1) forwards; }
+            .home-fade-in  { opacity: 0; animation: homeFadeIn 1s ease forwards; }
+            .home-d1 { animation-delay: .10s; }
+            .home-d2 { animation-delay: .20s; }
+            .home-d3 { animation-delay: .30s; }
+            .home-d4 { animation-delay: .40s; }
+            .home-d5 { animation-delay: .50s; }
+            .home-role-btn { -webkit-tap-highlight-color: transparent; }
+            @media (prefers-reduced-motion: reduce) {
+                .home-kenburns, .home-fade-up, .home-fade-in { animation: none !important; opacity: 1 !important; transform: none !important; }
+            }
+        </style>
+
+        <div class="relative h-screen w-screen overflow-hidden"
+             style="background: linear-gradient(135deg, ${themeColor} 0%, ${secondaryColor} 100%);">
+
+            <!-- ============================================ -->
+            <!-- BACKGROUND — full-bleed photo, positioned    -->
+            <!-- ============================================ -->
+            ${bgImage ? `
+                <img src="${bgImage}"
+                     alt=""
+                     aria-hidden="true"
+                     class="home-kenburns absolute inset-0 w-full h-full object-cover"
+                     style="object-position: ${bgPosition};"
+                     onerror="this.style.display='none';" />
+            ` : `
+                <!-- Fallback pattern when no image is configured -->
+                <div class="absolute inset-0 opacity-20"
+                     style="background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,.35) 0, transparent 40%), radial-gradient(circle at 80% 80%, rgba(255,255,255,.25) 0, transparent 45%);"></div>
+            `}
+
+            <!-- Overlay (desktop): dark on the left for text, opens up to the right -->
+            <div class="hidden md:block absolute inset-0"
+                 style="background: linear-gradient(100deg, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.25) 70%, rgba(0,0,0,0.35) 100%);"></div>
+            <!-- Overlay (mobile): light at the top so the photo shows, dark toward the sheet -->
+            <div class="md:hidden absolute inset-0"
+                 style="background: linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.10) 30%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.75) 100%);"></div>
+            <!-- Brand tint -->
+            <div class="absolute inset-0 pointer-events-none"
+                 style="background: linear-gradient(135deg, ${themeColor}55 0%, transparent 55%); mix-blend-mode: multiply;"></div>
+
+            <!-- ============================================ -->
+            <!-- CONTENT                                      -->
+            <!-- ============================================ -->
+            <div class="relative z-10 h-full w-full flex flex-col md:flex-row">
+
+                <!-- LEFT — Brand / Hero text -->
+                <div class="flex-1 min-h-0 flex flex-col justify-between p-5 sm:p-8 md:p-12 lg:p-16 text-white">
+
+                    <!-- Top: logo + short-name chip -->
+                    <div class="home-fade-in flex items-center gap-3">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-2xl bg-white/15 backdrop-blur-md border border-white/30 flex items-center justify-center overflow-hidden shadow-2xl flex-shrink-0">
+                            <img src="${logoPath}"
+                                 alt="${shortName} Logo"
+                                 class="w-full h-full object-contain p-1.5"
+                                 onerror="this.style.display='none'; this.parentElement.innerHTML='<i data-lucide=&quot;graduation-cap&quot; class=&quot;w-8 h-8 text-white&quot;></i>'; if(window.lucide) lucide.createIcons();" />
+                        </div>
+                        <div class="px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/25">
+                            <span class="text-xs sm:text-sm font-bold tracking-widest uppercase">${shortName}</span>
+                        </div>
                     </div>
-                    <div class="min-w-0">
-                        <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-white leading-tight">${schoolName}</h1>
-                        <p class="text-white/55 text-xs sm:text-sm mt-0.5">Offline Examination Platform</p>
-                    </div>
-                </div>
 
-                <!-- Answer-sheet illustration -->
-                <div class="relative z-10 flex-1 hidden md:flex items-center justify-center min-h-0 my-4">
-                    <div class="relative w-52 h-60">
-                        <div class="absolute inset-0 bg-white/10 rounded-2xl" style="transform: rotate(-7deg);"></div>
-                        <div class="absolute inset-0 bg-white/15 rounded-2xl" style="transform: rotate(4deg);"></div>
-                        <div class="absolute inset-0 bg-[#F7F6F3] rounded-2xl shadow-2xl p-5 flex flex-col gap-3">
-                            <div class="h-2 w-3/5 bg-[#1B1D2A]/15 rounded-full"></div>
-                            <div class="h-2 w-2/5 bg-[#1B1D2A]/10 rounded-full mb-1"></div>
-                            ${[1, 2, 3, 4].map(row => `
-                            <div class="flex items-center gap-2.5">
-                                <div class="h-2 flex-1 bg-[#1B1D2A]/10 rounded-full"></div>
-                                <div class="w-4 h-4 rounded-full border-2 flex-shrink-0"
-                                     style="${row === 2 ? `border-color:${primary}; background-color:${primary};` : 'border-color: rgba(27,29,42,0.2);'}"></div>
-                            </div>`).join('')}
+                    <!-- Bottom: school name, subtitle, tagline -->
+                    <div class="max-w-2xl">
+                        <div class="home-fade-up home-d1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/25 mb-3 md:mb-5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span class="text-[11px] sm:text-xs font-semibold tracking-wide">${subtitle}</span>
                         </div>
-                        <div class="absolute -top-3 -right-3 w-9 h-9 rounded-full shadow-lg flex items-center justify-center"
-                             style="background-color: ${primary};">
-                            <i data-lucide="check" class="w-4 h-4 text-white"></i>
+
+                        <h1 class="home-fade-up home-d2 text-2xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold leading-[1.1] tracking-tight drop-shadow-2xl">
+                            ${schoolName}
+                        </h1>
+
+                        <div class="home-fade-up home-d3 mt-3 md:mt-6 flex items-center gap-3">
+                            <span class="h-[3px] w-10 sm:w-14 rounded-full bg-white/80"></span>
+                            <p class="text-sm sm:text-base lg:text-xl font-medium italic text-white/90 drop-shadow-md">
+                                "${tagline}"
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                <div class="relative z-10 hidden md:flex items-center gap-2.5 mt-auto pt-4 md:pt-0 flex-shrink-0">
-                    <span class="text-xs text-white/40">${schoolShortName}</span>
-                    <span class="w-px h-3 bg-white/15"></span>
-                    <span class="text-xs text-white/40">${todayLabel}</span>
-                </div>
-            </div>
+                <!-- RIGHT — Action card (glass) -->
+                <div class="w-full md:w-[460px] lg:w-[520px] md:flex-shrink-0 md:flex md:items-center md:justify-center md:p-8 lg:p-10">
+                    <div class="home-fade-up home-d2 w-full rounded-t-3xl md:rounded-3xl shadow-2xl border border-white/40"
+                         style="background: rgba(255,255,255,0.92); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);">
 
-            <!-- ACTION PANEL -->
-            <div class="relative flex-1 min-h-0 flex flex-col justify-center px-6 sm:px-10 md:px-16 py-6 md:py-10 gap-4 md:gap-5 overflow-y-auto">
+                        <div class="px-5 sm:px-7 py-5 sm:py-6">
 
-                <div class="absolute top-0 right-0 w-64 h-64 pointer-events-none"
-                     style="background: radial-gradient(circle at top right, ${primary}, transparent 70%); opacity: 0.05;"></div>
+                            <!-- Grab handle (mobile sheet feel) -->
+                            <div class="md:hidden mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-300"></div>
 
-                <button id="closeBtn"
-                        aria-label="Close application"
-                        class="absolute top-4 right-4 md:top-6 md:right-6 z-20 w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-black/5 transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
+                            <!-- Heading -->
+                            <div class="mb-4">
+                                <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Welcome</h2>
+                                <p class="text-sm sm:text-base text-gray-600 mt-1">Pick your role to continue.</p>
+                            </div>
 
-                <div class="relative z-10 mb-1 pr-10">
-                    <p class="text-xl md:text-xl font-bold text-[#1B1D2A]">Continue as</p>
-                    <p class="text-sm text-gray-500 mt-1">Pick your role to sign in.</p>
-                </div>
+                            <!-- Role buttons -->
+                            <div class="w-full space-y-2.5 mb-4">
 
-                <!-- Primary action: Student -->
-                <button onclick="setPage('student-info')"
-                        class="relative z-10 group relative w-full text-left transition-colors rounded-2xl overflow-hidden shadow-lg"
-                        style="background-color: ${primary};"
-                        onmouseover="this.style.backgroundColor='${primaryHover}'"
-                        onmouseout="this.style.backgroundColor='${primary}'">
-                    <span class="hidden md:block absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-[#F7F6F3]"></span>
-                    <span class="hidden md:block absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-[#F7F6F3]"></span>
-                    <div class="flex items-center gap-4 md:gap-5 pl-7 md:pl-9 pr-6 py-4 md:py-6">
-                        <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
-                            <i data-lucide="list-checks" class="w-6 h-6 md:w-7 md:h-7 text-white"></i>
+                                <!-- Student (primary) -->
+                                <button onclick="setPage('student-info')"
+                                        class="home-role-btn home-fade-up home-d3 w-full group flex items-center gap-4 p-3 sm:p-3.5 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-0.5 active:scale-[0.99] text-left relative overflow-hidden"
+                                        style="background: linear-gradient(135deg, ${themeColor} 0%, ${secondaryColor} 100%);">
+                                    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                         style="background: linear-gradient(135deg, ${secondaryColor} 0%, ${themeColor} 100%);"></div>
+                                    <div class="relative w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                                         style="background: rgba(255,255,255,0.2);">
+                                        <i data-lucide="clipboard-check" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
+                                    </div>
+                                    <div class="relative flex-1 min-w-0">
+                                        <p class="font-bold text-white text-sm sm:text-base leading-tight">Start your exam</p>
+                                        <p class="text-xs sm:text-sm text-white/85 mt-0.5">For registered students</p>
+                                    </div>
+                                    <i data-lucide="arrow-right" class="relative w-5 h-5 text-white/80 group-hover:text-white group-hover:translate-x-1 transition-transform flex-shrink-0"></i>
+                                </button>
+
+                                <!-- Teacher -->
+                                <button onclick="setPage('teacher-login')"
+                                        class="home-role-btn home-fade-up home-d4 w-full group flex items-center gap-4 p-3 sm:p-3.5 bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 active:scale-[0.99] border border-gray-200 text-left"
+                                        onmouseover="this.style.borderColor='${themeColor}66'" onmouseout="this.style.borderColor=''">
+                                    <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                                         style="background: ${themeColor}14;">
+                                        <i data-lucide="school" class="w-5 h-5 sm:w-6 sm:h-6" style="color: ${themeColor};"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold text-gray-900 text-sm sm:text-base leading-tight">Teacher</p>
+                                        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Manage exams & results</p>
+                                    </div>
+                                    <i data-lucide="arrow-right" class="w-5 h-5 text-gray-400 group-hover:text-gray-800 group-hover:translate-x-1 transition-transform flex-shrink-0"></i>
+                                </button>
+
+                                <!-- Exam Office -->
+                                <button onclick="setPage('exam-office-login')"
+                                        class="home-role-btn home-fade-up home-d5 w-full group flex items-center gap-4 p-3 sm:p-3.5 bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 active:scale-[0.99] border border-gray-200 text-left"
+                                        onmouseover="this.style.borderColor='#7e22ce66'" onmouseout="this.style.borderColor=''">
+                                    <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                                         style="background: #7e22ce14;">
+                                        <i data-lucide="building" class="w-5 h-5 sm:w-6 sm:h-6" style="color: #7e22ce;"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold text-gray-900 text-sm sm:text-base leading-tight">Exam Office</p>
+                                        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Schedule & publish exams</p>
+                                    </div>
+                                    <i data-lucide="arrow-right" class="w-5 h-5 text-gray-400 group-hover:text-gray-800 group-hover:translate-x-1 transition-transform flex-shrink-0"></i>
+                                </button>
+                            </div>
+
+                            <!-- Feature badges -->
+                            <div class="flex flex-wrap justify-center gap-2 mb-4">
+                                <div class="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                                    <i data-lucide="wifi-off" class="w-3.5 h-3.5" style="color: ${themeColor};"></i>
+                                    <span class="text-xs font-semibold text-gray-600">Offline</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                                    <i data-lucide="shield-check" class="w-3.5 h-3.5" style="color: ${themeColor};"></i>
+                                    <span class="text-xs font-semibold text-gray-600">Secure</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5" style="color: ${themeColor};"></i>
+                                    <span class="text-xs font-semibold text-gray-600">Timed</span>
+                                </div>
+                            </div>
+
+                            <!-- Close Button (subtle) -->
+                            <button id="closeBtn"
+                                    class="group w-full text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 hover:bg-white/70 px-4 py-2.5 rounded-2xl font-semibold transition-all duration-300 flex items-center justify-center gap-2">
+                                <i data-lucide="power" class="w-4 h-4"></i>
+                                <span class="text-sm">Close Application</span>
+                            </button>
+
+                            <!-- Footer -->
+                            <div class="mt-3 text-center">
+                                <p class="text-xs text-gray-500">© ${year} ${shortName} • Version 1.0</p>
+                            </div>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-white font-bold text-base md:text-lg leading-tight">Start your exam</p>
-                            <p class="text-white/70 text-xs md:text-sm leading-tight mt-1">For registered students</p>
-                        </div>
-                        <i data-lucide="chevron-right" class="w-5 h-5 md:w-6 md:h-6 text-white/70 flex-shrink-0 group-hover:translate-x-0.5 transition-transform"></i>
                     </div>
-                </button>
-
-                <!-- Secondary actions: Teacher / Exam Office -->
-                <div class="relative z-10 grid grid-cols-2 gap-3.5 md:gap-4">
-                    <button onclick="setPage('teacher-login')"
-                            class="flex flex-col items-center justify-center gap-2.5 py-5 md:py-6 rounded-2xl border-2 border-black/10 bg-white hover:shadow-md transition-all"
-                            style="--role-color: ${secondary};"
-                            onmouseover="this.style.borderColor='${secondary}66'"
-                            onmouseout="this.style.borderColor=''">
-                        <div class="w-11 h-11 md:w-11 md:h-11 rounded-full flex items-center justify-center" style="background-color: ${secondary}1A;">
-                            <i data-lucide="presentation" class="w-5 h-5 md:w-5.5 md:h-5.5" style="color: ${secondary};"></i>
-                        </div>
-                        <span class="text-sm font-semibold text-[#1B1D2A]">Teacher</span>
-                    </button>
-                    <button onclick="setPage('exam-office-login')"
-                            class="flex flex-col items-center justify-center gap-2.5 py-5 md:py-6 rounded-2xl border-2 border-black/10 bg-white hover:border-[#1B1D2A]/30 hover:shadow-md transition-all">
-                        <div class="w-11 h-11 md:w-11 md:h-11 rounded-full bg-[#1B1D2A]/5 flex items-center justify-center">
-                            <i data-lucide="building-2" class="w-5 h-5 md:w-5.5 md:h-5.5 text-[#1B1D2A]"></i>
-                        </div>
-                        <span class="text-sm font-semibold text-[#1B1D2A]">Exam Office</span>
-                    </button>
-                </div>
-
-                <div class="relative z-10 flex md:hidden items-center gap-2.5 mt-1">
-                    <span class="text-xs text-gray-400">${schoolShortName}</span>
-                    <span class="w-px h-3 bg-black/10"></span>
-                    <span class="text-xs text-gray-400">Works without internet</span>
                 </div>
             </div>
         </div>

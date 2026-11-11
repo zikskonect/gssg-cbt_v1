@@ -1,3 +1,7 @@
+// exam-officer.actions.js — CORRECTED + REDESIGNED (2026)
+// 40/70 gate wired into: saveBulkSchedule() + toggleExamSchedule().
+// Single + Class saves live in exam-officer.render.js (see that file).
+// All other functions unchanged from your upload.
 // exam-officer.actions.js - Exam Officer Actions
 // Handles exam uploads, imports, exports, and scheduling
 
@@ -1305,7 +1309,9 @@ async function toggleExamSchedule(examId, isScheduled) {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             exam.scheduledDate = tomorrow.toISOString().split('T')[0];
-            showAlert(`Exam "${exam.subject}" scheduled for tomorrow`, 'success');
+            // Toggle has no picker: keep saved limit, default to 40 if never set. Never delete questionLimit on unschedule.
+            if ((exam.assessmentType || 'EXAM') !== 'CA' && exam.questionLimit !== 40 && exam.questionLimit !== 70) { exam.questionLimit = 40; }
+            showAlert(`Exam "${exam.subject}" scheduled for tomorrow${exam.questionLimit ? ` — ${exam.questionLimit} questions` : ''}`, 'success');
         } else {
             delete exam.scheduledDate;
             showAlert(`Exam "${exam.subject}" unscheduled`, 'info');
@@ -1856,26 +1862,25 @@ function closeBulkScheduleModal() {
 async function saveBulkSchedule(event) {
     event.preventDefault();
     const date = document.getElementById('bulk-schedule-date-picker').value;
-    
-    if (!date) {
-        showAlert('Please select a date', 'error');
-        return;
-    }
-    
+    if (!date) { showAlert('Please select a date', 'error'); return; }
+    // 40/70 GATE — one limit for all selected exams
+    const picked = document.querySelector('input[name="bulk-question-limit"]:checked');
+    const questionLimit = (typeof getValidQuestionLimit === 'function') ? getValidQuestionLimit(picked ? picked.value : null) : (picked && (picked.value==='40'||picked.value==='70') ? Number(picked.value) : null);
+    if (questionLimit === null) { showAlert('Please pick 40 or 70 questions per student', 'error'); return; }
     try {
         let scheduledCount = 0;
-        
         for (const examId of selectedScheduleExams) {
             const exam = state.availableExams.find(e => e.exam_id === examId);
             if (exam) {
                 exam.scheduledDate = date;
+                if (typeof isCA === 'function' ? !isCA(exam) : (exam.assessmentType || 'EXAM') !== 'CA') { exam.questionLimit = questionLimit; }
                 await saveExamToDB(exam);
                 scheduledCount++;
             }
         }
         
         await loadExams();
-        showAlert(`✅ ${scheduledCount} exam(s) scheduled for ${new Date(date).toLocaleDateString()}`, 'success');
+        showAlert(`✅ ${scheduledCount} exam(s) scheduled for ${new Date(date).toLocaleDateString()} — ${questionLimit} questions/student`, 'success');
         
         selectedScheduleExams.clear();
         updateBulkScheduleUI();

@@ -3,7 +3,7 @@
 
 const APP_CONFIG = {
     // App Metadata
-    appName: 'GSSS CBT',
+    appName: 'GSS GWAGWALADA CBT',
     version: '1.0.0',
 
     // Feature Flags
@@ -17,7 +17,7 @@ const APP_CONFIG = {
     defaultQuestionsPerPage: 20,
 
     // Storage Settings
-    dbName: 'GssscbtDB',
+    dbName: 'GssgcbtDB',
     dbVersion: 11,
 
     // UI Settings

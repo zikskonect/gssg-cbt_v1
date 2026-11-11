@@ -112,118 +112,130 @@ function jsonToCsv(exam) {
     })));
 
     const row = [
-        `"${exam.exam_id}"`,
-        `"${exam.subject}"`,
-        `"${exam.class}"`,
-        `"${exam.duration || 30}"`,
-        `"${exam.assessmentType || 'EXAM'}"`,
-        `"${exam.scheduledDate || ''}"`,
-        `"${questionsSafe.replace(/"/g, '""')}"`
+        exam.exam_id,
+        exam.subject,
+        exam.class,
+        exam.duration || 30,
+        exam.assessmentType || 'EXAM',
+        exam.scheduledDate || '',
+        questionsSafe
     ];
 
-    return headers.join(',') + '\n' + row.join(',');
+    return headers.join(',') + '\n' + row.map(escapeCSVField).join(',');
 }
 
-/**
- * Parse CSV with smart format detection.
- * Handles:
- *   1. Old format:  exam_id,subject,class,duration,questions_json
- *   2. New format:  exam_id,subject,class,duration,assessment_type,questions_json
- *   3. Date format: exam_id,subject,class,duration,scheduled_date,questions_json
- *   4. Master format: exam_id,subject,class,duration,assessment_type,scheduled_date,created_by,questions_json
- */
 function parseCSVWithBetterHandling(csvText) {
-    const rows = [];
-    let currentLine = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < csvText.length; i++) {
-        const char = csvText[i];
-        if (char === '"') inQuotes = !inQuotes;
-        if ((char === '\n' || char === '\r') && !inQuotes) {
-            if (currentLine.trim()) rows.push(currentLine.trim());
-            currentLine = "";
-        } else {
-            currentLine += char;
-        }
-    }
-    if (currentLine.trim()) rows.push(currentLine.trim());
-
+    const rows = parseCSVRows(csvText);
     if (rows.length < 2) throw new Error('File appears to be empty or invalid.');
 
-    // ---------- Read header to detect format ----------
-    const header = parseCSVLine(rows[0]).map(h => h.trim().toLowerCase());
-
-    const idx = {
-        exam_id:          header.indexOf('exam_id'),
-        subject:          header.indexOf('subject'),
-        class:            header.indexOf('class'),
-        duration:         header.indexOf('duration'),
-        questions_json:   header.indexOf('questions_json'),
-        assessment_type:  header.indexOf('assessment_type'),
-        scheduled_date:   header.indexOf('scheduled_date'),
-        created_by:       header.indexOf('created_by'),
+    const headers = rows[0].map(header =>
+        header.trim().replace(/^\uFEFF/, '').toLowerCase().replace(/[\s-]+/g, '_')
+    );
+    const columnIndex = (...names) => names
+        .map(name => headers.indexOf(name))
+        .find(index => index !== -1);
+    const getValue = (row, ...names) => {
+        const index = columnIndex(...names);
+        return index === undefined ? '' : (row[index] || '').trim();
     };
 
-    // questions_json column MUST exist — otherwise it's not a valid export
-    if (idx.questions_json === -1) {
-        throw new Error('Missing questions_json column — file was not exported from this app.');
-    }
-
-    // ---------- Parse first data row ----------
-    const first = parseCSVLine(rows[1]);
-
     const exam = {
-        exam_id:         first[idx.exam_id]   || 'N/A',
-        subject:         first[idx.subject]   || 'Unknown Subject',
-        class:           first[idx.class]     || 'Unknown Class',
-        duration:        parseInt(first[idx.duration]) || 30,
-        assessmentType:  idx.assessment_type !== -1
-                            ? (first[idx.assessment_type] || 'EXAM').toUpperCase().trim()
-                            : 'EXAM',
-        scheduledDate:   idx.scheduled_date !== -1
-                            ? (first[idx.scheduled_date] || null)
-                            : null,
-        created_by:      idx.created_by !== -1 ? (first[idx.created_by] || '') : '',
+        exam_id: getValue(rows[1], 'exam_id', 'examid') || rows[1][0] || 'N/A',
+        subject: getValue(rows[1], 'subject') || rows[1][1] || 'Unknown Subject',
+        class: getValue(rows[1], 'class', 'grade') || rows[1][2] || 'Unknown Class',
+        duration: parseInt(getValue(rows[1], 'duration'), 10) || parseInt(rows[1][3], 10) || 30,
+        assessmentType: getValue(rows[1], 'assessment_type', 'assessmenttype') || 'EXAM',
+        scheduledDate: getValue(rows[1], 'scheduled_date', 'scheduleddate') || null,
         questions: []
     };
 
-    // ---------- Parse questions_json ----------
-    let jsonColumn = first[idx.questions_json] ? first[idx.questions_json].trim() : '';
-
-    // Strip surrounding quotes if any (CSV writers sometimes double-quote)
-    if (jsonColumn.startsWith('"') && jsonColumn.endsWith('"')) {
-        jsonColumn = jsonColumn.substring(1, jsonColumn.length - 1).replace(/""/g, '"');
-    }
-
-    if (jsonColumn.startsWith('[')) {
-        // Immortal / JSON-in-one-cell format
+    const questionsColumn = columnIndex('questions_json', 'questionsjson', 'question_json');
+    if (questionsColumn !== undefined) {
+        const questionsJson = rows[1][questionsColumn];
         try {
-            exam.questions = JSON.parse(jsonColumn);
-        } catch (e) {
-            throw new Error('The questions JSON data is corrupted.');
+            exam.questions = JSON.parse(questionsJson);
+        } catch (error) {
+            throw new Error('The questions_json field contains invalid JSON.');
         }
-    } else {
-        // Legacy row-per-question format (no header-based JSON)
-        // This is very old — we try our best.
-        for (let i = 1; i < rows.length; i++) {
-            const row = parseCSVLine(rows[i]);
-            if (row.length < 8) continue;
-            exam.questions.push({
-                id: row[5] || Date.now() + i,
-                type: row[6] || 'multiple_choice',
-                question: row[7],
-                options: [row[8], row[9], row[10], row[11]].filter(Boolean),
-                correct_answer: row[12]
-            });
+        if (!Array.isArray(exam.questions)) {
+            throw new Error('The questions_json field must contain a JSON array.');
         }
+        return exam;
     }
 
-    if (!Array.isArray(exam.questions) || exam.questions.length === 0) {
-        throw new Error('No questions were found in the file.');
+    const questionIdColumn = columnIndex('question_id', 'id');
+    const questionTypeColumn = columnIndex('question_type', 'type');
+    const questionTextColumn = columnIndex('question', 'question_text');
+    const correctAnswerColumn = columnIndex('correct_answer', 'answer');
+    const optionsColumn = columnIndex('options', 'options_json');
+    const optionColumns = ['option_a', 'option_b', 'option_c', 'option_d'].map(name => headers.indexOf(name));
+
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row.some(value => value.trim())) continue;
+
+        let options;
+        if (optionsColumn !== undefined && row[optionsColumn]) {
+            try {
+                options = JSON.parse(row[optionsColumn]);
+            } catch (error) {
+                options = row[optionsColumn].split('|').map(option => option.trim());
+            }
+        } else if (optionColumns.some(index => index !== -1)) {
+            options = optionColumns.map(index => index === -1 ? '' : row[index] || '').filter(Boolean);
+        } else {
+            options = row.slice(8, 12);
+        }
+
+        exam.questions.push({
+            id: (questionIdColumn === undefined ? row[5] : row[questionIdColumn]) || Date.now() + i,
+            type: (questionTypeColumn === undefined ? row[6] : row[questionTypeColumn]) || 'multiple_choice',
+            question: (questionTextColumn === undefined ? row[7] : row[questionTextColumn]) || '',
+            options,
+            correct_answer: (correctAnswerColumn === undefined ? row[12] : row[correctAnswerColumn]) || ''
+        });
     }
 
     return exam;
+}
+
+function parseCSVRows(csvText) {
+    const text = String(csvText || '').replace(/^\uFEFF/, '');
+    const rows = [];
+    let row = [];
+    let field = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '"') {
+            if (inQuotes && text[i + 1] === '"') {
+                field += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (char === ',' && !inQuotes) {
+            row.push(field);
+            field = '';
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+            row.push(field);
+            if (row.some(value => value.trim())) rows.push(row);
+            row = [];
+            field = '';
+            if (char === '\r' && text[i + 1] === '\n') i++;
+        } else {
+            field += char;
+        }
+    }
+    if (inQuotes) throw new Error('CSV contains an unterminated quoted field.');
+    row.push(field);
+    if (row.some(value => value.trim())) rows.push(row);
+    return rows;
+}
+
+function escapeCSVField(value) {
+    return `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
 }
 
 function parseCSVLine(line) {
