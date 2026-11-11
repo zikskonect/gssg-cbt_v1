@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">GSSS CBT</string>
-    <string name="title_activity_main">GSSS CBT</string>
+    <string name="app_name">GSS CBT</string>
+    <string name="title_activity_main">GSS CBT</string>
     <string name="package_name">com.gssscbt.app</string>
     <string name="custom_url_scheme">com.gssscbt.app</string>
 </resources>

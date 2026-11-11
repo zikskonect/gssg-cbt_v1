@@ -1705,7 +1705,7 @@ console.error('Exam Office Login error:', err);
 
 
 async function quitCBT() {
-    if (confirm("Are you sure you want to exit the GSSS CBT System?")) {
+    if (confirm("Are you sure you want to exit the GSS CBT System?")) {
         try {
             // This is the Tauri-specific way to close the window
             const { exit } = window.__TAURI__.process;

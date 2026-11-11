@@ -68,7 +68,6 @@ const SCHOOL_CONFIG = {
 
 window.getSchoolName       = () => SCHOOL_CONFIG.schoolName;
 window.getSchoolShortName  = () => SCHOOL_CONFIG.schoolShortName;
-window.getSchoolCode       = () => SCHOOL_CONFIG.schoolCode;
 window.getSchoolLogo       = () => SCHOOL_CONFIG.logoPath;
 window.getSchoolTagline    = () => SCHOOL_CONFIG.tagline;
 window.getThemeColor       = () => SCHOOL_CONFIG.themeColor;

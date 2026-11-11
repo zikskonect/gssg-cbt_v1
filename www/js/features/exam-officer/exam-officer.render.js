@@ -349,7 +349,7 @@ function renderExamOfficeRegisterPage() {
                 <form id="exam-office-registration-form" onsubmit="handleExamOfficeRegistration(event)" style="display:flex;flex-direction:column;gap:15px">
                     <div>
                         <label for="exam-office-school-name" class="eo-label">School Name</label>
-                        <input type="text" id="exam-office-school-name" class="eo-input" placeholder="e.g., GSSS International" required />
+                        <input type="text" id="exam-office-school-name" class="eo-input" placeholder="e.g., GSS International" required />
                     </div>
                     <div>
                         <label for="exam-office-admin-name" class="eo-label">Admin Full Name</label>

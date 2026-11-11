@@ -157,7 +157,7 @@ function renderTeacherDashboard(state) {
                                 <i data-lucide="graduation-cap" class="w-8 h-8"></i>
                             </div>
                             <div>
-                                <h1 class="text-xl font-bold">GSSS T/M CBT</h1>
+                                <h1 class="text-xl font-bold">GSS T/M CBT</h1>
                                 <p class="text-xs text-pink-200">Teacher Portal</p>
                             </div>
                         </div>

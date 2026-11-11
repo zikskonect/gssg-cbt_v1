@@ -1388,7 +1388,7 @@ async function exportAllExamsSingleFile() {
         const csvContent = rows.join('\n');
         
         // Auto-generate filename
-        const schoolShortName = window.SCHOOL_CONFIG?.schoolShortName || 'GSSS';
+        const schoolShortName = window.SCHOOL_CONFIG?.schoolShortName || 'GSS';
         const today = new Date().toISOString().split('T')[0];
         const fileName = `${schoolShortName}_AllExams_${today}.csv`;
         

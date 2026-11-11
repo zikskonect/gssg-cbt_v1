@@ -193,7 +193,7 @@ function renderTeacherSidebar(state, active) {
                     <div class="flex items-center gap-3">
                         <div class="tc-brand-ic"><i data-lucide="graduation-cap" class="w-6 h-6"></i></div>
                         <div>
-                            <h1 class="text-lg font-extrabold" style="letter-spacing:-.01em;margin:0">${tEsc(window.SCHOOL_CONFIG?.schoolShortName || 'GSSS')} T/M CBT</h1>
+                            <h1 class="text-lg font-extrabold" style="letter-spacing:-.01em;margin:0">${tEsc(window.SCHOOL_CONFIG?.schoolShortName || 'GSS')} T/M CBT</h1>
                             <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#A5B4FC">Teacher Portal</p>
                         </div>
                     </div>
@@ -554,13 +554,13 @@ function tcPageButtons(currentPage, totalPages) {
     return pages.map(p => p === '...' ? `<span style="min-width:30px;display:inline-flex;align-items:center;justify-content:center;color:#94A3B8">…</span>` : btn(p)).join('');
 }
 
-const TC_SUBJECTS = ['Agricultural Science', 'Arabic', 'Beauty & Cosmetology', 'Biology', 'Chemistry', 'Christian Religious Studies',
+const TC_SUBJECTS = ['Agricultural Science', 'Arabic', 'Beauty & Cosmetology', 'Biology', 'Catering Craft Practice', 'Chemistry', 'Christian Religious Studies',
     'Citizenship & Heritage Studies Education', 'Commerce', 'Digital Technologies', 'Economics', 'English Language',
     'Financial Accounting', 'Fishery', 'Foods and Nutrition', 'French', 'Further Mathematics',
     'Fashion Design & Garment Making', 'General Mathematics', 'Geography', 'Government', 'Hausa', 'History',
     'Health Education/Health Science', 'Home Management', 'Horticulture & Crop Production', 'Igbo', 'Insurance',
     'Islamic Religious Studies', 'Literature in English', 'Leather Works', 'Livestock Farming', 'Marketing',
-    'Painting and Decoration', 'Physical Education', 'Physics', 'Store Management', 'Technical Drawing',
+    'Painting and Decoration', 'Physical Education', 'Physics', 'Solar and Photo Voltaic installation', 'Store Management', 'Technical Drawing',
     'Visual Arts', 'Yoruba'];
 
 function renderCreateExamPage(state) {
