@@ -31,3 +31,6 @@ Thumbs.db
 
 # Capacitor generated
 android/app/src/main/assets/public/
+
+node_modules/
+dist_electron/

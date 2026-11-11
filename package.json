@@ -2,8 +2,14 @@
   "name": "gssgwags-cbt",
   "version": "1.0.0",
   "description": "GSS GWAGS CB Exam Platform",
+  "main": "main.js",
   "scripts": {
-    "build": "echo no build needed"
+    "build": "echo no build needed",
+    "electron": "electron .",
+    "build:desktop": "electron-builder",
+    "build:desktop:win": "electron-builder --win",
+    "build:desktop:mac": "electron-builder --mac",
+    "build:desktop:linux": "electron-builder --linux"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
@@ -14,6 +20,33 @@
     "@capawesome/capacitor-file-picker": "^8.1.0"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5"
+    "@capacitor/assets": "^3.0.5",
+    "electron": "^45.3.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.gssg.cbt",
+    "productName": "GSS CBT",
+    "directories": {
+      "output": "dist_electron"
+    },
+    "files": [
+      "main.js",
+      "www/**/*",
+      "!www/node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "www/js/icon-192bb.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "www/js/icon-192bb.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "www/js/icon-192bb.png",
+      "category": "Education"
+    }
   }
 }
