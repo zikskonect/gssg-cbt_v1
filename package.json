@@ -1,7 +1,7 @@
 {
-  "name": "gsss-cbt",
+  "name": "gssgwags-cbt",
   "version": "1.0.0",
-  "description": "GSSS CBT Exam Platform",
+  "description": "GSS GWAGS CB Exam Platform",
   "scripts": {
     "build": "echo no build needed"
   },
